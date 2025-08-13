@@ -1,8 +1,6 @@
 {
 	"nodes":[
 		{"id":"ca495671446ddbc8","type":"text","text":"# Image reconstruction methods\n\nRight now vADF is our main focus, but extensibility should be a consideration. Our business in 4D-stem is reconstructing images from data, so we need a mix\n\nSee [[AdvancedComputingInElectronMicroscopy.pdf]] for the bible on image reconstruction methods\n","x":-146,"y":22,"width":706,"height":278},
-		{"id":"8dffb28713c2dfe6","type":"text","text":"# Diffraction Patterns","x":-375,"y":505,"width":515,"height":95},
-		{"id":"5e8669b477c12884","type":"text","text":"# Support virtual ADF (vADF)\nVirtual detector, same as vADF. \n\n- Real-time feedback via integrated ADF video","x":307,"y":476,"width":493,"height":204},
 		{"id":"7a041c137a5a1d44","type":"text","text":"# Detector Control\nWhat level of detector control is required? All control is via Serval. \n- Destination API\n- Pixel configuration API (we can leverage the recent work in accos for this)\n- DACs settings upload/configuration\n- Acquisition settings (trigger period etc. again, we can leverage recent work for this)\n- Only supports Tpx3? Or do we support Tpx4 from the begining \n- Start and stopping the detector\n\n\n","x":59,"y":990,"width":761,"height":310},
 		{"id":"7656dc28ea63442c","type":"text","text":"# Dependencies \n1) [Serval](https://bitbucket.org/amscins/serval/src/master/)\n2) [ServalClient](https://bitbucket.org/amscins/serval-client/src/main/)\n3) [pixelconfig](https://bitbucket.org/amscins/pixelconfig/src/main/)\n4) [Luna](https://bitbucket.org/amscins/luna/src/main/)\n5) PyQt6 \n\nUse Luna for the main processing in this project. Alternative is to rely on Serval only. Either option could work, but not sure which is best. Think about it more.\n\nUsing Luna complicates the pipeline, instead of just sernding a http reqeuest we need to coordinate Luna and Serval. \n\nBut Serval is already complicated, might actually be better to have another 4D-stem specific serval dependent to handle the 4D-stem stuff. Separation of concerns. \n\nIf we use luna, do we need to receive the UDP stream ourselves? ","x":-452,"y":1252,"width":432,"height":568},
 		{"id":"c4b1b401c7ed2453","type":"text","text":"Means we need a client for serval\n* http interface, use ServalClient package for this","x":-636,"y":1857,"width":456,"height":203},
@@ -26,16 +24,27 @@
 		{"id":"efa5734cf394980b","type":"text","text":"# Regions of Interest\nPeople have requested being able to draw regions with the mouse for defining scan geometry\n\n(Is that correct?)","x":647,"y":1516,"width":363,"height":225},
 		{"id":"183f7e3a0b794db6","type":"text","text":"# Output\n* Sparse data\n* Images\n* Live stream\n    * Of raw data? \n    * Of image data? \n* [Hspy format](https://hyperspy.org/rosettasciio/user_guide/supported_formats/hspy.html#hspy-format) \n* \n\t","x":59,"y":1929,"width":450,"height":344},
 		{"id":"9e7e7885d76d70b5","type":"text","text":"# Replay (?)\nIt'd be nice to process old datasets in the same way new ones are processed","x":1037,"y":1524,"width":393,"height":143},
-		{"id":"fec85de6d0d0c852","x":-373,"y":824,"width":580,"height":89,"type":"text","text":"- Clear scan area definition and post-selection with live preview"},
+		{"id":"fec85de6d0d0c852","type":"text","text":"- Clear scan area definition and post-selection with live preview","x":-373,"y":824,"width":580,"height":89},
 		{"id":"e6300fc5423e21ad","type":"text","text":"# UI Design Mockup\n\nClick the [Figma Link](https://www.figma.com/board/0Cuwl7vVU8IBp6uOnqVyA6/4d-stem-ui?node-id=1-5&t=hEw8DeseHZbYbznP-1) for the mockup UI","x":820,"y":-433,"width":545,"height":269},
 		{"id":"a4c4c0135ecc72c2","type":"text","text":"Standard Workflow Components\n> \"reinventing the wheel\" for certain user interface elements that have already proven effective in the field.\n\nWhat are these user interface elements? ","x":-1920,"y":376,"width":486,"height":224},
-		{"id":"98461a821b7e55ad","x":-1360,"y":562,"width":250,"height":60,"type":"text","text":""},
-		{"id":"3d0efc0d2d6ac26e","x":346,"y":-682,"width":674,"height":202,"type":"text","text":"#  Final Document\nThe information here will be used to [inform a formal requirements document](https://www.overleaf.com/1138588391pkzwybbjqvyn#21d66c) that you can find here. \n\nhttps://www.overleaf.com/1138588391pkzwybbjqvyn#21d66c"}
+		{"id":"98461a821b7e55ad","type":"text","text":"","x":-1360,"y":562,"width":250,"height":60},
+		{"id":"3d0efc0d2d6ac26e","type":"text","text":"#  Final Document\nThe information here will be used to [inform a formal requirements document](https://www.overleaf.com/1138588391pkzwybbjqvyn#21d66c) that you can find here. \n\nhttps://www.overleaf.com/1138588391pkzwybbjqvyn#21d66c","x":346,"y":-682,"width":674,"height":202},
+		{"id":"8dffb28713c2dfe6","type":"text","text":"# Diffraction Patterns","x":-598,"y":451,"width":515,"height":95},
+		{"id":"5e8669b477c12884","type":"text","text":"# Support virtual ADF (vADF)\nVirtual detector, same as vADF. \n\n- Real-time feedback via integrated ADF video","x":-149,"y":596,"width":493,"height":204},
+		{"id":"5f7f57f4a378555b","type":"text","text":"# iDPC","x":400,"y":536,"width":250,"height":60},
+		{"id":"b43b83e6811b84e4","type":"text","text":"# iCOM","x":560,"y":391,"width":250,"height":60},
+		{"id":"1b916f821daca414","type":"text","text":"# Reliability","x":2115,"y":1562,"width":250,"height":60},
+		{"id":"983fb2869d18ff69","type":"text","text":"# Interoperability\n","x":2115,"y":1660,"width":307,"height":58},
+		{"id":"c120096b08dc23c6","type":"text","text":"# Integration\n* Serval for detector control\n* Luna for data processing\n* ","x":2115,"y":1740,"width":250,"height":249},
+		{"id":"efdb991fce381a4f","type":"text","text":"# Observability\nWe need to know event rates, TDC rate and online perofrmance monitoring metrics. ","x":2008,"y":2020,"width":452,"height":100},
+		{"id":"2bf34581acc127cc","x":1975,"y":2138,"width":250,"height":60,"type":"text","text":"# Cross platform\n(Implicit requirement)"}
 	],
 	"edges":[
 		{"id":"eb7951c6c4fdfa31","fromNode":"8dffb28713c2dfe6","fromSide":"top","toNode":"ca495671446ddbc8","toSide":"bottom"},
 		{"id":"e701a265438498bc","fromNode":"5e8669b477c12884","fromSide":"top","toNode":"ca495671446ddbc8","toSide":"bottom"},
 		{"id":"1c9145bf8a0ff7d4","fromNode":"5eea2e805d48877d","fromSide":"top","toNode":"7a041c137a5a1d44","toSide":"bottom"},
-		{"id":"ce4d472ff753821d","fromNode":"a4c4c0135ecc72c2","fromSide":"top","toNode":"b468d178c9d94118","toSide":"bottom"}
+		{"id":"ce4d472ff753821d","fromNode":"a4c4c0135ecc72c2","fromSide":"top","toNode":"b468d178c9d94118","toSide":"bottom"},
+		{"id":"69abe756ecfe0f99","fromNode":"5f7f57f4a378555b","fromSide":"top","toNode":"ca495671446ddbc8","toSide":"bottom"},
+		{"id":"06e194064db0d631","fromNode":"b43b83e6811b84e4","fromSide":"top","toNode":"ca495671446ddbc8","toSide":"bottom"}
 	]
 }

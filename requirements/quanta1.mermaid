@@ -1,0 +1,152 @@
+---
+config:
+  flowchart:
+    curve: basis
+---
+flowchart LR
+%% --- UI surface ---
+    subgraph UI["4D-STEM UI"]
+        UI_Config["Endpoint config and banners"]
+        UI_Mode["Mode selector (Search/Acquire)"]
+        UI_Backend["Scan backend selector"]
+        UI_ROI["ROI selection"]
+        UI_Mask["Mask editor & visualization"]
+        UI_ZConfig["Z-stack config (Z value / continuous)"]
+        UI_Preview["Preview display"]
+        UI_OfflineDisplay["Offline image display"]
+        UI_OfflineJobs["Offline jobs: run/cancel/progress"]
+        UI_Export["Export & format conversion"]
+        UI_Obs["Observability panels (hit-rate, latency, per-stage)"]
+        UI_Workspaces["Workspace open/create & metadata viewer"]
+        UI_OutputLoc["Output location picker"]
+        UI_OutputFmt["Output format dropdown"]
+    end
+
+%% --- Q2: Online (hot path) ---
+    subgraph OIR["Q2: Online Image Reconstruction (hot path)"]
+        ZSTACK["Z-stack Manager (frame grouping)"]
+        MASK_ON["Software Mask Application (online)"]
+        RECON["Real-time Reconstruction (vADF/GPU/ROI/masking)"]
+    end
+
+%% --- Q3: Offline recon ---
+    subgraph OFR["Q3: Offline Image Reconstruction"]
+        MASK_OFF["Software Mask Application (offline)"]
+    end
+
+%% --- Q4: Output & exports (split) ---
+    subgraph EXPORTQ["Q4: Data Output and Export Management"]
+        HPW["Q4a: High-Performance Data Writers"]
+        EXPCONV["Q4b: Export & Conversion Services"]
+    end
+
+%% --- Core control planes & services ---
+    SCP["Q1: Serval Control Plane (detector)"]
+    ORCH["Q5: Acquisition Orchestrator & Mode Manager"]
+    SCN["Q6: Scan Generator Control & Sync"]
+    OBS["Q7: Observability & Pipeline Health"]
+    Q8["Q8: Workspace & Provenance (manifests, schemas, metadata)"]
+
+%% --- Externals / stores ---
+    SER["Serval (Detector SW)"]
+    SCANHW["Scan Generator HW (multiple backends)"]
+    ING["Event Ingest / Sync"]
+    DS["Local Storage: datasets + ProbeIndex"]
+    OS["Process Manager"]
+    LOG["Per-run log sink"]
+
+%% --- UI wiring ---
+    UI_Config --> SCP
+    UI_Mode --> ORCH
+    UI_Backend --> SCN
+    UI_ROI --> RECON
+    UI_ROI --> OFR
+    UI_ROI --> SCN
+    UI_Mask --> MASK_ON
+    UI_Mask --> MASK_OFF
+    UI_Mask --> SCP
+    UI_ZConfig --> ZSTACK
+    OIR --> UI_Preview
+    OFR --> UI_OfflineDisplay
+    UI_OfflineJobs --> OFR
+    UI_Export --> EXPCONV
+    OBS --> UI_Obs
+    UI_Workspaces --> Q8
+    UI_OutputLoc --> HPW
+    UI_OutputFmt --> HPW
+
+%% --- Orchestrator policies & locks ---
+    ORCH -- "start/stop/lock policy" --> SCN
+    ORCH -- "arm/start/stop policy" --> SCP
+    ORCH -- "mode & preview policy" --> RECON
+    ORCH -- "write policy & preflight" --> HPW
+    ORCH -- "lock params & masks during Acquire" --> UI_ROI
+    ORCH -- "lock params & masks during Acquire" --> UI_Mask
+    ORCH -- "frame 0 / markers" --> OIR
+
+%% --- Control-plane & logs ---
+    SCP -- "init + set data dest" --> SER
+    SCP -. "keepalives" .-> SER
+    SCP -. "spawn/terminate" .-> OS
+    SCP --> LOG
+    SCN -- "backend control" --> SCANHW
+
+%% --- Serval ↔ Scan sync signals (via Orchestrator) ---
+    SCN -- "start-of-scan boundary, probe XY, skew metrics" --> ORCH
+    SCP -- "detector state, start ack" --> ORCH
+
+%% --- Hot path data flow ---
+    SER -- "TCP event stream" --> ING
+    ING --> ZSTACK
+    ZSTACK --> MASK_ON
+    ZSTACK --> HPW
+    MASK_ON --> RECON
+    RECON -- "preview frames" --> UI_Preview
+    RECON --> HPW
+
+%% --- Offline data path & exports ---
+    OFR --> MASK_OFF
+    MASK_OFF -- "process using stored frames/metadata" --> DS
+    OFR --> EXPCONV
+    HPW -- "raw & recon data + metadata" --> DS
+    EXPCONV -- "write processed datasets & images" --> DS
+
+%% --- Provenance & manifests ---
+    SCP -- "detector version/settings → provenance" --> Q8
+    SCN -- "grid/ROI/dwell → provenance" --> Q8
+    ZSTACK -- "frame manifests" --> Q8
+    RECON -- "algo params (vADF/GPU/ROI/masks)" --> Q8
+    OFR -- "offline algo params/results" --> Q8
+    OBS -- "per-second counters/latency summaries" --> Q8
+    HPW -- "directory layout & run IDs (consult/write)" --> Q8
+    EXPCONV -- "stamp exports with metadata" --> Q8
+    Q8 -- "write manifests/metadata files" --> DS
+    Q8 -- "open/show measurement metadata" --> UI_Workspaces
+
+%% --- Logging sinks ---
+    OBS --> LOG
+
+%% --- Styling ---
+    classDef q1 fill:#f9d5e5,stroke:#333,stroke-width:1px;
+    classDef q2 fill:#d5e5f9,stroke:#333,stroke-width:1px;
+    classDef q3 fill:#d5f9e5,stroke:#333,stroke-width:1px;
+    classDef q4a fill:#fce5cd,stroke:#333,stroke-width:1px;
+    classDef q4b fill:#f9eac3,stroke:#333,stroke-width:1px;
+    classDef q5 fill:#e0d7ff,stroke:#333,stroke-width:1px;
+    classDef q6 fill:#c6efd3,stroke:#333,stroke-width:1px;
+    classDef q7 fill:#ffd1dc,stroke:#333,stroke-width:1px;
+    classDef q8 fill:#e6f0ff,stroke:#333,stroke-width:1px;
+    classDef sq fill:#fff3b0,stroke:#333,stroke-width:1px;
+
+    class SCP q1
+    class OIR q2
+    class OFR q3
+    class HPW q4a
+    class EXPCONV q4b
+    class ORCH q5
+    class SCN q6
+    class OBS q7
+    class Q8 q8
+    class ZSTACK sq
+    class MASK_ON sq
+    class MASK_OFF sq
