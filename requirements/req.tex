@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+\documentclass[10pt]{article}
 
 % --- Encoding & basic fonts -----------------------------------------
 \usepackage[utf8]{inputenc}
@@ -93,7 +93,6 @@
 %                       Title metadata
 % ===================================================================
 
-\newcommand{\CompanyLogoPath}{images/asi-logo.png}
 
 \title{4D-STEM Requirements Specification}
 \author{Ciaran Welsh / SEM Team}
@@ -115,38 +114,28 @@
 
 \section{Introduction}\label{sec:intro}
 % Purpose - who is the product for?
-This document defines the implementation-independent software requirements for 4D-STEM users. It is a living reference for software and application engineers as well as the business teams at ASI. The document should be considered a `living document' that should be updated in an organized manner as the project evolves.
+This document defines the implementation-independent software requirements for 4D-STEM users. It is a reference for software and application engineers as well as the business side of ASI. The document should be considered `living' in that the information should be updated with pertinent information as the project evolves.
 
-4D-STEM (Four Dimensional Scanning Transmission Electron Microscopy) is a microscopy technique where a focused electron beam is scanned across a sample, producing a 2D diffraction pattern at each position. The resulting four-dimensional dataset, with two spatial and two reciprocal-space dimensions, enables detailed analysis of structure, strain, and other material properties. The advantage that Timepix3 (and Timepix4) offer such an application are derived from the event-driven nature of the detector; timepix detectors record each electron hit independently from other pixels which avoids some of the frame-based limitations and offering greater performance. This also allows small dwell times, improves dose efficiency for beam-sensitive samples, reduces data volume through sparse readout, and supports real-time analysis with lower memory and bandwidth requirements.
+4D-STEM (Four Dimensional Scanning Transmission Electron Microscopy) is a microscopy technique where a focused electron beam is scanned across a sample, producing a 2D diffraction pattern at each position. The resulting four-dimensional dataset, with two spatial and two reciprocal-space dimensions, enables detailed analysis of structure, strain, and other material properties. The advantage that Timepix3 (and Timepix4) offer such an application are derived from the event-driven nature of the detector; timepix detectors are event driven and therefore record each hit independently from other pixels, and therefore avoiding some of the frame-based limitations and offering greater performance. With tpx3 in 4D-STEM we can get small dwell times, improved dose efficiency for beam-sensitive samples, reduced data volume and supports real-time analysis with lower memory and bandwidth requirements.
 
-% project scope - overview of the product in relation to business goals. What are the expected outcomes?
-ASI specializes in Timepix3 and now Timepix4 detectors, and this project aims to deliver a complete 4D-STEM solution, not just the detector hardware. The software will enable customers to control their detectors, acquire data, and process it in real time, forming a cohesive package for scientists conducting 4D-STEM experiments. The solution aims to be primarily acquisition software; any processing conducted by the software should adhere to the goal of enabling 4D-stem application scientists acquire data for further processing in whatever tool they choose. The solution will replace the current 4D-STEM features in Serval and Accos, simplifying both of them and separating out the responsibilities of 4D-STEM and other application areas.
+From a business perspective, the primary project goal is to sell more ASI detectors by embedding them into the 4D-stem solution. The 4D-STEM component adds considerable value to the detector and therefore makes this a worthy enterprise for ASI. Our goal is to build a full 4D-STEM solution, including both hardware and software components. Importantly we design for and include the next generation of timepix (Timepix4) into the design from day 1. We might not be able to support the full rate timepix 4 from the begining but with appropriate modularity in the design we should be able to drop in higher performance replacements for performance critical components (such as versions that run on the GPU).
 
-The primary business goal is to increase adoption of ASI detectors by providing a specialised, high-performance 4D-STEM platform that reduces user complexity and enables 4D-STEM research workflows. Success will be defined by users being able to control both their scan engine and Timepix device from a single UI, conduct experiments without performance issues, and view processed results in real time without needing to manage the data pipeline themselves. Finally they should be able to export data in ways useful to their further analysis, for example in LiberTEM, HyperSpy and py4dStem.
+To date, ASI have focused their efforts on building this feature into Accos and Serval, but with difficulties. This document is not intended to be a review of that work, but suffice to say that the existing solution is not an ergonimic experience for neither the user nor the developer. The proposal outlined in this document is intended as a replacement to the 4D-STEM corners of Accos and Serval.
 
-The software will focus on 4D-STEM workflows, with possible inclusion of 4D-STEM EELS in the future. It will not support ptychography, conventional STEM or general detector control, which are explicitly out of scope. For the latter, users can use Accos or Serval directly.
-
-\subsection{Definitions and Acronyms}
-% Clearly define all key terms, acronyms, and abbreviations used in the SRS. This will help eliminate any ambiguity and ensure that all parties easily understand the document.
-\begin{enumerate}
-    \item CBED
-    \item vADF
-    \item iDPC
-    \item iCOM
-\end{enumerate}
-
+In the following sections we describe the system we intend to build from a high level perspective. We describe the envionment the system needs to run, including software and hardware dependencies and we outline the needs of the end user that this software aims to solve. We outline functional requirements and the architectural characteristics that developers need to design for, based on these needs.
 
 \section{Overall Description}\label{sec:overall_description}
 % Purpose: Provide a high-level view of the product and boundaries before detailed requirements.
 % Guidance: Keep technology-agnostic and avoid "shall" statements in this section.
-This product is a dedicated 4D-STEM acquisition application designed for ASI's Timepix3 and Timepix4 detectors. It provides an integrated environment for configuring experiments, acquiring event data, generating real-time preview images, and exporting results for external analysis. It replaces the 4D-STEM functionality currently in Serval and Accos, separating 4D-STEM acquisition workflows from general detector control and processing.
+% project scope - overview of the product in relation to business goals. What are the expected outcomes?
+The primary function of this software is to enable users one integrated workstation for the control of their detector and scan generators. The software needs to be one cohesive unit that enables scientists to conduct their experiments and collect data for further analysis. It is the first tool in their chain of tools that delivers them results for publications. As such this software needs to deliver ergonimic workflows for the evaluation and acquisition of their sample. It needs a performant live image stream to provide microcopists with enough information to evaluate a section of sample and interoperability with other tools that enable further study of their data, including LiberTEM, HyperSpy and py4dStem. We do not focus on specialised downstream analysis techniques such as ptychography.
 
-The application runs on a single workstation together with Serval for detector control and scan-engine control software for communication with the scan generator. Serval configures the detector and streams raw binary event data, which the application processes for display and measurement. The software handles the integration between scan engine and detector and presents results to the user with acquisition statistics and metrics. A general overview of the application’s position in the broader tool ecosystem is shown in \cref{fig:general_structure}.
+The software must be suitable for execution on a single workstation. Serval is the primary mechanism for controlling the detector and we need multiple mechanisms of control for a choice of scan generators to reach a larger audience. From the user perspective however, the new software is the one over-riding central point of control for all the tools necessary to conduct their experiment. A general overview of the application's position in the broader ecosystem is shown in \cref{fig:general_structure}.
 
 External connections are:
 \begin{itemize}
     \item \textbf{Serval}: REST API for detector configuration and TCP stream for event data.
-    \item \textbf{Scan generator}: Controlled via vendor-supplied binary (FFI) or gRPC.
+    \item \textbf{Scan generator}: Controlled via vendor-supplied shared library (FFI), gRPC or another system of communication.
     \item \textbf{Local storage}: High-throughput NVMe drives for data capture.
 \end{itemize}
 
@@ -157,57 +146,51 @@ External connections are:
     \label{fig:general_structure}
 \end{figure}
 
-
 \subsection{User Classes and Characteristics}\label{subsec:user-classes-and-characteristics}
 % Purpose: Describe user groups and relevant characteristics that affect design and UX.
 % Guidance: Do not list needs here; needs belong in Section 2.6.
-The primary users are 4D-STEM scientists, who also operate the microscope. Users range from computationally literate power users to those without much experience. Both users are mainly focused on scientific outcome rather than on the processing required to get them there. The software abstracts data acquisition and visualisation details so that no programming skills are required. All functions are available without special permissions.
+The primary users are 4D-STEM scientists, who also operate the microscope. Users range from computationally literate power users to those without much experience. Both users are mainly focused on scientific outcome rather than on the processing required to get them there. The software abstracts data acquisition and visualisation details so that no programming skills are required for them to do just that.
+
+\subsection{Definitions and Acronyms}
+% Clearly define all key terms, acronyms, and abbreviations used in the SRS. This will help eliminate any ambiguity and ensure that all parties easily understand the document.
+\begin{enumerate}
+  \item <expand and define>
+  \item CBED:
+  \item vADF:
+  \item iDPC:
+  \item iCOM:
+  \item Diffraction bands: the amount of diffraction an electron experiences is related to the charge of the atoms inherent in the sample (please validate this statement). A typical sample therefore has characteristic diffraction patterns which can be selected using an annulus shape.
+\end{enumerate}
 
 \subsection{Operating Environment}\label{subsec:operating-environment}
 % Purpose: Define hardware, OS, network, and site constraints that impact design and testing.
 % Guidance: Include only factors that materially constrain architecture or verification.
-The application supports Windows, Ubuntu, and macOS at launch; other Linux distributions can be built on request. It runs on high-performance lab workstations with specifications sufficient for sustained high-rate data capture and processing. GPU acceleration is planned for future versions but is not required initially. The system operates on localhost only, with all components running on the same machine. Storage must sustain the highest practical write speeds for the selected output format.
-
-\subsection{User Needs}\label{subsec:user-needs}
-% Purpose: Capture what users are trying to accomplish and why; basis for traceability.
-% Guidance: Paste or reference the enumerated needs with rationale; no solutions here.
-
-\subsection{Assumptions and Dependencies}
-% Purpose: Record assumptions to monitor and external dependencies that can fail.
-% Guidance: Keep items checkable; they become risks if invalidated.
+The application supports Windows, Ubuntu, and macOS at launch; other Linux distributions can be built on request. Our primary system is ubuntu and several aspects of our tooling are already optimized for ubuntu. We therefore aim for performance targets primarily on ubuntu, and only secondarily on the other operating systems. The software shall run on a high-performance lab workstations with specifications sufficient for sustained high-rate data capture and processing. GPU acceleration is planned for future versions but is not required initially. The system operates on localhost only, with all components running on the same machine. Storage must sustain the highest practical write speeds for the selected output format.
 
 \subsection{User Needs}
 % user classes: Describe who will use the software and what are the expectations of the user?
 % “User needs” capture the *problem space* (what the people using the product are trying to accomplish) while “Features” capture the *solution space* (what the system will do to meet those needs).} Putting them in separate sections makes it possible to trace every feature back to a genuine user demand and to challenge any feature that has no such lineage.
 \begin{enumerate}
-  \item \textbf{Dedicated 4D-STEM interface separate from the generic detector UI}\\
-        \textit{Rationale: Build with a 4D-stem first mentality. Makes software 4d-stem centric, minimises cognitive load on our users needing to compete with more general use cases and prevents accidental changes to routine detector operations. Separation of concerns.}
-  \item \textbf{Immediate, clearly organized access to all scan-generator controls}\\
-        \textit{Rationale: Reduces set-up time, enhances usability and ensures detector settings stay consistent with scan parameters.}
   \item \textbf{Seamless integration with Serval for detector control whilst being exposed to only what they need}\\
-        \textit{Rationale: Serval must be used for detector control but minimizing the user interaction with Serval reduces the learning curve and enhances usability}
+        \textit{Rationale}: Serval must be used for detector control but minimizing the user interaction with Serval reduces the learning curve and enhances usability.
   \item \textbf{Real-time visual feedback during scans}\\
-        \textit{Rationale: Enables rapid navigation to regions of interest and immediate quality assessment. Also prevents wasted beam time.}
-  \item \textbf{Acquire continuous or multi-frame (“Z-stack”) scans}\\
-        \textit{Rationale: Lets users monitor radiation damage frame-by-frame.}
-  \item \textbf{Ability to run essential offline analyses inside the application}\\
-        \textit{Rationale: Enables quality assessment decisions without exporting large datasets to external tools.}
-  \item \textbf{Flexible detector masking (hardware or software) to include/exclude pixels before acquisition.}\\
-        \textit{Rationale: Controls data volume and tailor field-of-view after initial acquisition in post-processing.}
-  \item \textbf{Interactive pixel group selection for averaged diffraction images}\\
-        \textit{Rationale: Users can observe averaged regions of sample in diffraction space.}
+        \textit{Rationale}: Enables rapid navigation to regions of interest and immediate quality assessment. Also prevents wasted beam time.
+  \item \textbf{Ability to run essential offline analyses inside the application, such as offline image reconstruction methods}\\
+        \textit{Rationale}: Enables quality assessment decisions without exporting large datasets to external tools.
+  \item \textbf{Acquire continuous or multi-frame (`Z-stack') scans}\\
+        \textit{Rationale}: Lets users monitor radiation damage frame-by-frame and perform statistics based on multiple measurements in a region.
+  \item \textbf{Flexible detector masking (hardware or software) to select pixels for subsequent analysis.}\\
+        \textit{Rationale}: Enables selection of diffraction bands for online and offline image reconstruction algorithms.
   \item \textbf{Switchable scan modes to balance performance and user feedback trade-offs}\\
-        \textit{Rationale: When searching for interesting features for capture, we need to optimize performance, and low latency preview. When acquiring data "for real", we optimize data integrity for further analysis.}
+        \textit{Rationale}: Allocation of computational resources should be allocated differently depending on whether the user is searching for interesting features or whether they have already found them and want to acquire data for further analysis.
   \item \textbf{Export raw \emph{or} processed data in open formats (e.g.\ SparseArray, HDF5, Zarr) and where appropriate, image data}\\
-        \textit{Rationale: Guarantees images can be saved and interoperability with analysis suites such as LiberTEM, HyperSpy, and py4DSTEM.}
-  \item \textbf{Real-time observability of acquisition-pipeline health (hit-rate, processing load, synchronisation)}\\
-        \textit{Rationale: Gives user feedback and "sanity checkibility" for operatives, indicates dropped frames and that hit rate is expected.}
-  \item \textbf{Data integrity/fidelity at extreme rates}\\
-        \textit{Rationale: Ensures every diffraction event is mapped to the right probe position even in the fastest scans, preserving scientific validity.}
-  \item \textbf{Extensibility hooks for future 4D-STEM modalities behind feature flags}\\
-        \textit{Rationale: Makes the tool relevant for future and lets advanced users adopt new workflows (e.g.\ EELS, ptychography) without redesigning the core tool.}
-  \item \textbf{Possibility to use this tool with Tpx4}\\
-    \textit{Rationale: We build for the future now by supporting the next generation Timepix technology from initial design.}
+        \textit{Rationale}: Guarantees images can be saved and interoperability with downstream analysis suites such as LiberTEM, HyperSpy, and py4DSTEM.
+  \item \textbf{Real-time observability of acquisition-pipeline health (hit-rate, processing load, synchronization)}\\
+        \textit{Rationale}: Gives user vital feedback that can be used to understand what is happening in the pipeline. This includes amounts of dropped data, per chip level hit rates and data throughput/latency rates.
+  \item \textbf{Dedicated 4D-STEM interface separate from the generic detector UI}\\
+  \textit{Rationale}: Build with a 4D-stem first mentality. Makes software 4d-stem centric, minimises cognitive load on our users needing to compete with more general use cases of the timepix3 detector and prevents accidental changes to routine detector operations. Separation of concerns.
+  \item \textbf{Immediate and clearly organized access to scan-generator controls}\\
+  \textit{Rationale}: Scan controls are some of the most important in 4D-STEM, they should be prevalent and obvious in the user workflow for better user experience, operating on the principle of least clicks to control your scan.
 \end{enumerate}
 
 
@@ -221,7 +204,7 @@ The application supports Windows, Ubuntu, and macOS at launch; other Linux distr
 \subsection{Functional Requirements}
 
 \subsubsection{Serval Interaction Layer}
-Serval is the control-plane interface between the application and the detector.
+Serval is the control interface between the application and the detector.
 
 \begin{requirements}{SRV}
 
@@ -448,9 +431,6 @@ Serval is the control-plane interface between the application and the detector.
 
 
 \end{requirements}
-
-
-
 
 
 \subsubsection{Output and Raw Data Collection}
@@ -785,174 +765,97 @@ Serval is the control-plane interface between the application and the detector.
 
 \end{requirements}
 
-% Restore default Verification visibility if desired
-
-
-% \subsubsection{Pixel Masking}
-
-% \begin{enumerate}
-%     \item \should Support hardware masking. Means we need to modify and upload pixel configurations manually. We have code in Python that we can leverage for this.
-%     \item \must Support software masking. Software masking is much simpler than hardware masking because you do not need to upload anything to the detector.
-%     \item If both software and hardware masking are implemented, then we need a switch between them.
-%     \item Masks are recorded in measurement metadata as shape parameters (e.g. x,y, r1, r2 for annulus)
-%     \item masks are autoloaded when user loads existing dataset that has a saved mask
-%     \item \must Masks are visually displayed to the user on the view port. Different colours for hardware/software mask.
-%     \item \must Masks are immutable whilst acquiring.
-% \end{enumerate}
-
-
-% \subsubsection{Acquisition Modes}
-
-% \begin{enumerate}
-%     \item \must Search mode is preview only (vADF). It is optimized for searching the sample. We need a list of items required for this. For instance, low dose?
-%     \item \must Acquire mode is where we dump raw or processed data to disk. If performance allows preview \could be displayed.
-
-% \end{enumerate}
-
-
-% % \subsubsection{Output}
-
-% % \begin{enumerate}
-% %     \item Any image produced by this tool \must be exportable to TIFF or png format (other image formats?)
-% %     \item \must Raw data acquisitions prioritise dumping data to disk without data loss or corruption.
-% %     \item \must write data to sparse array format for export to liberTEM
-% %     \item \should write data to ZARR format. Online if possible, otherwise offline from raw data. Resulting data should be loadable in <Which tool?>
-% %     \item \should write data to Hyperspy's standardised HDF5 format. Online if possible, otherwise offline from raw data. Resulting data should be loadable in <Hyperspy>
-% %     \item \could Offline converters between formats
-% %     \item \could Use ROIs to select regions for export to other formats.
-% %     \item \must not modify the raw data in any way.
-% % \end{enumerate}
-
-
-% \subsubsection{Scan generator }
-
-% \begin{enumerate}
-%     \item \must scan generator with backend selection
-%     \item \must scan starts at the same time as detector, within 1us. (feasible?)
-% \end{enumerate}
-
-
-% \subsubsection{Observability and pipeline health}
-
-% We need to define exactly what is meant by performance, throughput and latency. What do these measure mean in this project? Use equations to be precise.
-
-% \begin{enumerate}
-%     \item \must Statistics are computed for the whole detector as well as at the chip level granularity
-%     \item \must While a scan is Running or Previewing, the UI shall update the hit-rate every $\le$1s.
-%     \item \should Each processing step shall calculate its throughput in bytes/s (not hits/s, so that we normalize differences between steps and can make a direct comparison. These measure shall me presented to the user in the UI if user opted in. This is a development and debugging tool that will hurt performance and so it will need to be activated manually either by an in GUI option or a feature flag environment variable.
-%     \item The system shall compute the processing latency (time between event timestamp and presentation to user OR stored to disk. Target: updates every 0.5s and display the rolling mean, with 1s window.
-%     \item When the observability tools are enabled the latency shall not degrade beyond +10ms compared to the pipeline without full observability enabled.
-%     \item \could <for Fran> Can we measure synchronisation between scan box and detector? Something like `abs(hit.toa@40MHz - <some quantity from the scan engine>` would give us an quantitative measure of jitter.
-%     \item Dropped data shall be made clear to the user
-% \end{enumerate}
-
-
-
-% % \subsubsection{Specification by Example / BDD Format}
-% % % Use Gherkin syntax:
-% % % Given [context], When [event], Then [outcome]
-% ### Data integrity/fidelity at extreme rates
-% Guarantee that **no diffraction events are lost or mis‑mapped** even when the scan runs at the detector’s maximum throughput.
-
-% #### Functional Requirements
-% 1. when the hit‑rate ≤ 320 Mhits s⁻¹ and dwell ≤ 1 µs, the system **shall** assign ≥ 99.999999 \% of detector hits to the correct probe coordinate.
-% 2. Under the same conditions, the system **shall** limit lost or duplicated hits to ≤ 0.001\% of total hits.
-% 3. The sorter pipeline **shall** persist each mapped hit within 0.5µs (median) of the detector‑provided timestamp.
-% 4. While acquiring, the system **shall** publish per‑second counters of total hits, lost hits, mis‑mapped hits,and median latency via the telemetry bus.
-
-
-
 \subsubsection{UI Shell}
 
 This section describes the UI counterpart of the feature only. Every UI component is backed by a non-UI component and its business logic is tested away from the UI in the form of unit/integration/end-to-end testing.
 
 \begin{requirements}{UI}
 
-\item \must \req{Standalone launch}
+  \item \must \req{Standalone launch}
   % what will be done
   {The application shall launch as a standalone process when the user double-clicks the 4D-STEM UI icon or selects it from the native OS menu.}
   % acceptance
   {Main window becomes interactive; a single primary process is visible in the OS process list.}
 
-\item \must \req{Restricted detector controls}
+  \item \must \req{Restricted detector controls}
   % what will be done
   { The UI shall display only the detector controls listed in Appendix UI-A1 (whitelist).}
   % acceptance criteria
   {Across all screens and states, only whitelisted controls appear; no navigation path exposes non-whitelisted controls.}
 
-\item \must \req{Derived detector settings}
+  \item \must \req{Derived detector settings}
   % what will be done
   { Where specified in Appendix UI-A2, detector settings shall be derived automatically from scan parameters without additional user interaction. If the setting can be abstracted from the user, then it should be.}
   % acceptance criteria
   {Changing any covered scan parameter updates the mapped detector setting. The change is reflected in serval}
 
-\item \must \req{Scan engine selector}
+  \item \must \req{Scan engine selector}
   % what will be done
   {The UI shall present a control to select which scan engine is in use, always visible. Supported scan box units are present in the drop down list but disabled if not found.}
   % acceptance criteria
   {Control is visible without opening dialogs; selection persists to the active measurement context.}
 
-\item \must \req{Scan geometry controls}
+  \item \must \req{Scan geometry controls}
   % what will be done
   {The UI shall present controls for geometry including: scan height and width (in probe positions), prescan x/y, always visible.}
   % acceptance criteria
   {Editing values updates the pending scan geometry such that they take effect when a stem acquisition is run.}
 
-\item \must \req{Dwell control}
+  \item \must \req{Dwell control}
   % what will be done
   {The UI shall present a dwell-time control, always visible.}
   % acceptance criteria
   {Value changes propagate to pending acquisition parameters and appear in the run summary / logs.}
 
-\item \must \req{Z-frames control}
+  \item \must \req{Z-frames control}
   % what will be done
   {The UI shall present a control for the number of frames \(Z\) (frame = one full scan of \(H\times W\)), always visible.}
   % acceptance criteria
   {\(Z\) appears in the run summary and is written to measurement metadata.}
 
-\item \must \req{Start (Preview)}
+  \item \must \req{Start (Preview)}
   % what will be done
   {The UI shall provide a Start (Search/Preview) control.}
   % acceptance criteria
   {Activating enters Preview mode and renders live vADF; control indicates running state.}
 
-\item \must \req{Start (Acquire)}
+  \item \must \req{Start (Acquire)}
   % what will be done
   {The UI shall provide a Start (Acquire) control.}
   % acceptance criteria
   {Activating starts acquisition with current parameters and writes data to the selected output format(s).}
 
-\item \must \req{Output Location}
+  \item \must \req{Output Location}
   % what will be done
   {The UI presents a widget to collect output location. The widget accepts text input and selection from the native filesystem widget}
   % acceptance criteria
   {Acquisition puts the data and metadata into this location}
 
-\item \must \req{Output format}
+  \item \must \req{Output format}
   % what will be done
-    {A dropdown containing supported output formats is presented and always visible.}
+  {A dropdown containing supported output formats is presented and always visible.}
   % acceptance criteria
-    {Output format is a field in the metadata. After acquisition the data shall be in the requested location in the required format}
+  {Output format is a field in the metadata. After acquisition the data shall be in the requested location in the required format}
 
-\item \must \req{Workspaces}
+  \item \must \req{Workspaces}
   % what will be done
   {Users shall be able to create/open a workspace; a workspace can contain multiple measurements.}
   % acceptance criteria
   {New/open actions work; workspace path is stored in recent list; multiple measurements list correctly.}
 
-\item \must \req{Measurement metadata}
+  \item \must \req{Measurement metadata}
   % what will be done
   {Each measurement shall have metadata persisted as JSON (schema defined in Data Formats), accessible via the UI but hidden by default. All scan and detector parameters are included in the measurement metadata plus comments written by users themselves.}
   % acceptance criteria
   {'Show metadata` displays a measurement viewer, hidden by default; file exists on disk with schema version and passes schema validation.}
 
-\item \must \req{Stop button}
+  \item \must \req{Stop button}
   % what will be done
   {The UI shall provide a Stop control that is enabled only while Preview or Acquire is running.}
   % acceptance criteria
   {Disabled when idle; enabled within 200 ms of run start; returns UI to idle on activation.}
 
-\item \must \req{Stop semantics}
+  \item \must \req{Stop semantics}
   % what will be done
   {When the user presses \emph{Stop}, the system shall finish the current probe position and then stop. A preference 'Stop at frame boundary` shall, when enabled, finish the current frame before stopping.}
   % acceptance criteria
@@ -961,67 +864,67 @@ This section describes the UI counterpart of the feature only. Every UI componen
   [Test: trigger Stop mid-frame with option off/on; verify end position and manifest entries.]
 
 
-\item \label{req:ui:roi} \must \req{ROIs}
+  \item \label{req:ui:roi} \must \req{ROIs}
   % what will be done
   {The user shall be able to create, update/move and remove rectangular, circular or annular ROIs by click-and-drag on the viewport.}
   % acceptance criteria
   {ROI appears with handles; coordinates shown in status.}
 
-\item \must \req{ROI to scan geometry}
+  \item \must \req{ROI to scan geometry}
   % what will be done
   {The system shall translate a rectangular ROI into an equivalent scan geometry. ROIs snap to the pixel grid so values derived are integers.}
   % acceptance criteria
   {Computed \(H\) and \(W\) equal ROI extents; pending scan parameters update accordingly.}
 
-\item \must \req{ROI for diffraction views}
+  \item \must \req{ROI for diffraction views}
   % what will be done
   {The system shall allow using ROI selections to build diffraction images (e.g. averaged CBED of the selection).}
   % acceptance criteria
   {Selecting a rectangular ROI automatically computed the average CBED}
 
-\item \could \req{ROI expanded view}
+  \item \could \req{ROI expanded view}
   % what will be done
   {A ROI shall be expandable via invoking the 'right click > Expand ROI` function. The system produces a full size, zoomed in image from the selection and optionally enables updating the scan geometry to reflect the new sub-region}
   % acceptance criteria
   {Right-click > Expand ROI opens the new view of the current image. The new view has the correct bounds and scan is updated.}
 
-\item \could \req{Dockable controls}
+  \item \could \req{Dockable controls}
   % what will be done
   {Control panels shall be dockable/undockable and toggleable via the View menu. A default layout is exposed for return to factory settings. }
   % acceptance criteria
   {Panels can be moved, floated, and toggled.}
 
-\item \must \req{Persistence}
+  \item \must \req{Persistence}
   % what will be done
   {UI settings (layout, last workspace, panel visibility, scan control values) shall persist across sessions and at the granularity of a workspace. Detector specific controls persist per workstation, rather than per workspace.}
   % acceptance criteria
   {Close/reopen restores prior state on the same machine/user.}
 
-\item \must \req{Connectivity loss handling}
+  \item \must \req{Connectivity loss handling}
   % what will be done
   {On loss of connectivity to Serval, scan engine, or detector, the UI shall display status and attempt reconnect every 1 s until success.}
   % acceptance criteria
   {Observed retry interval for at least 10 min; status banner visible.}
 
-\item \must \req{Startup without connectivity}
+  \item \must \req{Startup without connectivity}
   % what will be done
   {If no connectivity is available at startup, the UI shall present a non-blocking status and allow offline configuration. Any setting or control relating to the unconnected device or server shall be blocked when not connected.}
   % acceptance criteria
   {Main window is usable; status banner visible; configuration pages accessible. Scan controls disabled when no scan generator available. Controls that drive Serval are disabled when serval is not available.}
 
-\item \must \req{Logging}
+  \item \must \req{Logging}
   % what will be done
   {The UI shall write a log of important events to disk and to console; log level is controlled by environment variable \texttt{LOG\_LEVEL}. Log location is user-configurable under \texttt{File > Preferences} but defaults to within the workspace configuration.}
   % acceptance criteria
   {Different \texttt{LOG\_LEVEL} values change verbosity; files created at default paths; preference overrides path; Serval redirection present.}
 
-\item \must \req{Disk space guard (preflight + warning)}
+  \item \must \req{Disk space guard (preflight + warning)}
   % what will be done
   {On \emph{Start (Acquire)}, the system shall evaluate free space on the selected target volume. If free space is at or below the near-full threshold (default 5\% of the volume), the system shall present a low-space warning before starting. If the volume reports 0 writable bytes free, the acquisition shall not start.}
   % acceptance criteria
   {On pressing \emph{Start (Acquire)}: (a) if free space > threshold, acquisition begins; (b) if free space \(\le\) threshold, a low-space warning is shown and the user may proceed; (c) if free space \(=0\), acquisition is blocked and an error is shown. All cases are recorded in the log.}
 
-\item \must req{Detector info and health available}
+  \item \must req{Detector info and health available}
   % what will be done
     {UI shall display from view > detector health a UI panel describing the detectors information from serval}
   % Acceptance criteria
@@ -1029,67 +932,32 @@ This section describes the UI counterpart of the feature only. Every UI componen
 
 \end{requirements}
 
-% Enable per-item Verification lines for this section
-
-
 
 \subsection{Non-Functional Requirements}
 
-\subsubsection{Performance}
-\subsubsection{Scalability}
-\subsubsection{Extensibility}
-\subsubsection{Maintainability}
-\subsubsection{Portability}
-\subsubsection{Usability}
-\subsubsection{Testability}
-\subsubsection{Modularity}
+%\subsubsection{Performance}
+%\subsubsection{Scalability}
+%\subsubsection{Extensibility}
+%\subsubsection{Maintainability}
+%\subsubsection{Portability}
+%\subsubsection{Usability}
+%\subsubsection{Testability}
+%\subsubsection{Modularity}
 
-\subsubsection{Usability, Reliability}
+%\subsubsection{Usability, Reliability}
 
 \subsection{Legal and Regulatory Requirements}
-Licenses. What can we do? What can't we do? What software license do we provide?
+Licenses. What can we do? What can't we do?
 
 
 
 
-
-% \section{Quantitative Measures}
-
-% \begin{enumerate}
-%     \item Online algorithms require high performance.
-%     \item Offline algorithms do not need to be as high performing, as long as results are available in reasonable time.
-%     \item
-% \end{enumerate}
-
-
-% \section{Testing}
-% How can we build a setup in the lab suitable for testing 4D-stem?
-
-% Can we get a motorised stage for moving the sample and a pin hole to reduce the xray to a beam? Control the stage with the scan box, then we can simulate 4D stem.
-
-% All UI requirements shall be tested only at the UI level and shall not test any logic beyond what is presented to the user.
-
-% Every class/struct has an appropriate number of unit tests to validate important behaviour in isolation of the rest of the system
-
-% Interacting components shall have integration tests. Larger scale components should be tested together. End-to-end testing for full system test. Manual testing, use as if you were user tests. Real test at microscope with partner university.
-
-% \section{GPU algorithms}
-
-% \section{sorting}
-
-% \section{}
-% We should experiment with line vs pixel clocks vs external "master" clock.
-
-% \section{vADF}\label{section:vadf}
 
 \section{Appendices}
 \subsection{Glossary}
 \subsection{Use Cases and Diagrams}
 
 
-
-
-% Include UML, flowcharts, sequence diagrams, etc.
 
 
 \end{document}

@@ -1,0 +1,8 @@
+.idea
+*.js
+*.xml
+*.aux
+*.log
+*.gz
+*.toc
+.DS_Store
