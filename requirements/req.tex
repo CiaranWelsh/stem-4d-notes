@@ -25,11 +25,11 @@
 
 \geometry{margin=1in}
 \hypersetup{
-  colorlinks  = true,
-  linkcolor   = blue,
-  urlcolor    = blue,
-  pdftitle    = {System Requirements Specification},
-  pdfpagemode = FullScreen,
+    colorlinks  = true,
+    linkcolor   = blue,
+    urlcolor    = blue,
+    pdftitle    = {System Requirements Specification},
+    pdfpagemode = FullScreen,
 }
 % must be loaded after hyperref!
 \usepackage{cleveref}
@@ -39,7 +39,7 @@
 %                       MOSCOW PRIORITY TAGS
 % ===================================================================
 \newcommand{\PriorityTag}[2]{%
-  \colorbox{#2!25}{\footnotesize\textsf{\textbf{#1}}}\hspace{0.6em}}
+    \colorbox{#2!25}{\footnotesize\textsf{\textbf{#1}}}\hspace{0.6em}}
 
 \newcommand{\must}{\leavevmode\PriorityTag{Must}{green}}
 \newcommand{\should}{\leavevmode\PriorityTag{Should}{yellow}}
@@ -64,30 +64,50 @@
 \showverificationfalse % flip to \showverificationtrue to show Verification lines
 
 \newcommand{\reqnum}{%
-  \ifnum\value{reqno}<10 0\fi
-  \ifnum\value{reqno}<1 00\fi
-  \arabic{reqno}%
+    \ifnum\value{reqno}<10 0%
+    \else\ifnum\value{reqno}<1 00%
+    \else\ifnum\value{reqno}<10 0%
+        \fi\fi\fi
+    \arabic{reqno}%
 }
-
 \newenvironment{requirements}[1]{%
-  \renewcommand{\reqprefix}{#1}%
-  \refstepcounter{reqgrp}% start a new anchor group per block
-  \setcounter{reqno}{0}%
-  \begin{enumerate}[leftmargin=*]
-}{\end{enumerate}}
+    \renewcommand{\reqprefix}{#1}%
+    \refstepcounter{reqgrp}% start a new anchor group per block
+    \setcounter{reqno}{0}%
+    \begin{enumerate}[leftmargin=*]
+    }{\end{enumerate}}
+
 
 \makeatletter
 % \req{Title}{Shall-statement}{Acceptance}[Verification]
-\NewDocumentCommand{\req}{m m m O{}}{%
-  \refstepcounter{reqno}%
-  \protected@edef\@currentlabel{REQ-\reqprefix-\reqnum}%
-  \textbf{REQ-\reqprefix-\reqnum\ -- #1.} #2\par
-  \emph{Acceptance:} #3\par
-  \if\relax\detokenize{#4}\relax\else
-    \emph{Verification:} #4\par
-  \fi
+\NewDocumentCommand{\req}{m g g o}{%
+    \refstepcounter{reqno}%
+    \protected@edef\@currentlabel{REQ-\reqprefix-\reqnum}%
+    \textbf{REQ-\reqprefix-\reqnum\ -- #1.} %
+    % Shall-statement (optional, braced)
+    \IfNoValueF{#2}{%
+        \if
+            \relax\detokenize{#2}\relax\else
+            #2\par
+        \fi
+    }%
+    % Acceptance (optional, braced)
+    \IfNoValueF{#3}{%
+        \if
+            \relax\detokenize{#3}\relax\else
+            \emph{Acceptance:} #3\par
+        \fi
+    }%
+    % Verification (optional, bracketed)
+    \IfNoValueF{#4}{%
+        \if
+            \relax\detokenize{#4}\relax\else
+            \emph{Verification:} #4\par
+        \fi
+    }%
 }
 \makeatother
+
 
 % ===================================================================
 %                       Title metadata
@@ -102,866 +122,853 @@
 
 \begin{document}
 
-\maketitle
+    \maketitle
 
-\begin{center}
-  \includegraphics[width=0.5\textwidth]{asi-logo}
-\end{center}
+    \begin{center}
+        \includegraphics[width=0.5\textwidth]{asi-logo}
+    \end{center}
 
-\tableofcontents
-\newpage
+    \tableofcontents
+    \newpage
 
 
-\section{Introduction}\label{sec:intro}
+    \section{Introduction}\label{sec:intro}
 % Purpose - who is the product for?
-This document defines the implementation-independent software requirements for 4D-STEM users. It is a reference for software and application engineers as well as the business side of ASI. The document should be considered `living' in that the information should be updated with pertinent information as the project evolves.
+    This document defines the implementation-independent software requirements for 4D-STEM users. It is a reference for software and application engineers as well as the business side of ASI. The document should be considered `living' in that the information should be updated with pertinent information as the project evolves.
 
-4D-STEM (Four Dimensional Scanning Transmission Electron Microscopy) is a microscopy technique where a focused electron beam is scanned across a sample, producing a 2D diffraction pattern at each position. The resulting four-dimensional dataset, with two spatial and two reciprocal-space dimensions, enables detailed analysis of structure, strain, and other material properties. The advantage that Timepix3 (and Timepix4) offer such an application are derived from the event-driven nature of the detector; timepix detectors are event driven and therefore record each hit independently from other pixels, and therefore avoiding some of the frame-based limitations and offering greater performance. With tpx3 in 4D-STEM we can get small dwell times, improved dose efficiency for beam-sensitive samples, reduced data volume and supports real-time analysis with lower memory and bandwidth requirements.
+    4D-STEM (Four Dimensional Scanning Transmission Electron Microscopy) is a microscopy technique where a focused electron beam is scanned across a sample, producing a 2D diffraction pattern at each position. The resulting four-dimensional dataset, with two spatial and two reciprocal-space dimensions, enables detailed analysis of structure, strain, and other material properties. The advantage that Timepix3 (and Timepix4) offer such an application are derived from the event-driven nature of the detector; timepix detectors are event driven and therefore record each hit independently from other pixels, and therefore avoiding some of the frame-based limitations and offering greater performance.
+    With tpx3 in 4D-STEM we can get small dwell times, improved dose efficiency for beam-sensitive samples, reduced data volume and supports real-time analysis with lower memory and bandwidth requirements.
 
-From a business perspective, the primary project goal is to sell more ASI detectors by embedding them into the 4D-stem solution. The 4D-STEM component adds considerable value to the detector and therefore makes this a worthy enterprise for ASI. Our goal is to build a full 4D-STEM solution, including both hardware and software components. Importantly we design for and include the next generation of timepix (Timepix4) into the design from day 1. We might not be able to support the full rate timepix 4 from the begining but with appropriate modularity in the design we should be able to drop in higher performance replacements for performance critical components (such as versions that run on the GPU).
+    From a business perspective, the primary project goal is to sell more ASI detectors by embedding them into the 4D-stem solution. The 4D-STEM component adds considerable value to the detector and therefore makes this a worthy enterprise for ASI. Our goal is to build a full 4D-STEM solution, including both hardware and software components. Importantly we design for and include the next generation of timepix (Timepix4) into the design from day 1. We might not be able to support the full rate timepix 4 from the begining but with appropriate modularity in the design we should be able to drop in higher performance replacements for performance critical components (such as versions that run on the GPU).
 
-To date, ASI have focused their efforts on building this feature into Accos and Serval, but with difficulties. This document is not intended to be a review of that work, but suffice to say that the existing solution is not an ergonimic experience for neither the user nor the developer. The proposal outlined in this document is intended as a replacement to the 4D-STEM corners of Accos and Serval.
+    To date, ASI have focused their efforts on building this feature into Accos and Serval, but with difficulties. This document is not intended to be a review of that work, but suffice to say that the existing solution is not an ergonimic experience for neither the user nor the developer. The proposal outlined in this document is intended as a replacement to the 4D-STEM corners of Accos and Serval.
 
-In the following sections we describe the system we intend to build from a high level perspective. We describe the envionment the system needs to run, including software and hardware dependencies and we outline the needs of the end user that this software aims to solve. We outline functional requirements and the architectural characteristics that developers need to design for, based on these needs.
+    In the following sections we describe the system we intend to build from a high level perspective. We describe the envionment the system needs to run, including software and hardware dependencies and we outline the needs of the end user that this software aims to solve. We outline functional requirements and the architectural characteristics that developers need to design for, based on these needs.
 
-\section{Overall Description}\label{sec:overall_description}
+
+    \section{Overall Description}\label{sec:overall_description}
 % Purpose: Provide a high-level view of the product and boundaries before detailed requirements.
 % Guidance: Keep technology-agnostic and avoid "shall" statements in this section.
 % project scope - overview of the product in relation to business goals. What are the expected outcomes?
-The primary function of this software is to enable users one integrated workstation for the control of their detector and scan generators. The software needs to be one cohesive unit that enables scientists to conduct their experiments and collect data for further analysis. It is the first tool in their chain of tools that delivers them results for publications. As such this software needs to deliver ergonimic workflows for the evaluation and acquisition of their sample. It needs a performant live image stream to provide microcopists with enough information to evaluate a section of sample and interoperability with other tools that enable further study of their data, including LiberTEM, HyperSpy and py4dStem. We do not focus on specialised downstream analysis techniques such as ptychography.
+    The primary function of this software is to enable users one integrated workstation for the control of their detector and scan generators. The software needs to be one cohesive unit that enables scientists to conduct their experiments and collect data for further analysis. It is the first tool in their chain of tools that delivers them results for publications. As such this software needs to deliver ergonimic workflows for the evaluation and acquisition of their sample. It needs a performant live image stream to provide microcopists with enough information to evaluate a section of sample and interoperability with other tools that enable further study of their data, including LiberTEM, HyperSpy and py4dStem. We do not focus on specialised downstream analysis techniques such as ptychography.
 
-The software must be suitable for execution on a single workstation. Serval is the primary mechanism for controlling the detector and we need multiple mechanisms of control for a choice of scan generators to reach a larger audience. From the user perspective however, the new software is the one over-riding central point of control for all the tools necessary to conduct their experiment. A general overview of the application's position in the broader ecosystem is shown in \cref{fig:general_structure}.
+    The software must be suitable for execution on a single workstation. Serval is the primary mechanism for controlling the detector and we need multiple mechanisms of control for a choice of scan generators to reach a larger audience. From the user perspective however, the new software is the one over-riding central point of control for all the tools necessary to conduct their experiment. A general overview of the application's position in the broader ecosystem is shown in \cref{fig:general_structure}.
 
-External connections are:
-\begin{itemize}
-    \item \textbf{Serval}: REST API for detector configuration and TCP stream for event data.
-    \item \textbf{Scan generator}: Controlled via vendor-supplied shared library (FFI), gRPC or another system of communication.
-    \item \textbf{Local storage}: High-throughput NVMe drives for data capture.
-\end{itemize}
+    External connections are:
+    \begin{itemize}
+        \item \textbf{Serval}: REST API for detector configuration and TCP stream for event data.
+        \item \textbf{Scan generator}: Controlled via vendor-supplied shared library (FFI), gRPC or another system of communication.
+        \item \textbf{Local storage}: High-throughput NVMe drives for data capture.
+    \end{itemize}
 
-\begin{figure}[t]
-    \centering
-    \includegraphics[width=0.7\linewidth]{GeneralStructure}
-    \caption{Overview of the application in relation to other tools}
-    \label{fig:general_structure}
-\end{figure}
+    \begin{figure}[t]
+        \centering
+        \includegraphics[width=0.7\linewidth]{GeneralStructure}
+        \caption{Overview of the application in relation to other tools}
+        \label{fig:general_structure}
+    \end{figure}
 
-\subsection{User Classes and Characteristics}\label{subsec:user-classes-and-characteristics}
+    \subsection{User Classes and Characteristics}\label{subsec:user-classes-and-characteristics}
 % Purpose: Describe user groups and relevant characteristics that affect design and UX.
 % Guidance: Do not list needs here; needs belong in Section 2.6.
-The primary users are 4D-STEM scientists, who also operate the microscope. Users range from computationally literate power users to those without much experience. Both users are mainly focused on scientific outcome rather than on the processing required to get them there. The software abstracts data acquisition and visualisation details so that no programming skills are required for them to do just that.
+    The primary users are 4D-STEM scientists, who also operate the microscope. Users range from computationally literate power users to those without much experience. Both users are mainly focused on scientific outcome rather than on the processing required to get them there. The software abstracts data acquisition and visualisation details so that no programming skills are required for them to do just that.
 
-\subsection{Definitions and Acronyms}
+    \subsection{Definitions and Acronyms}
 % Clearly define all key terms, acronyms, and abbreviations used in the SRS. This will help eliminate any ambiguity and ensure that all parties easily understand the document.
-\begin{enumerate}
-  \item <expand and define>
-  \item CBED:
-  \item vADF:
-  \item iDPC:
-  \item iCOM:
-  \item Diffraction bands: the amount of diffraction an electron experiences is related to the charge of the atoms inherent in the sample (please validate this statement). A typical sample therefore has characteristic diffraction patterns which can be selected using an annulus shape.
-\end{enumerate}
+    \begin{enumerate}
+        \item <expand and define>
+        \item CBED:
+        \item vADF:
+        \item iDPC:
+        \item iCOM:
+        \item Diffraction bands: the amount of diffraction an electron experiences is related to the charge of the atoms inherent in the sample (please validate this statement). A typical sample therefore has characteristic diffraction patterns which can be selected using an annulus shape.
+    \end{enumerate}
 
-\subsection{Operating Environment}\label{subsec:operating-environment}
+    \subsection{Operating Environment}\label{subsec:operating-environment}
 % Purpose: Define hardware, OS, network, and site constraints that impact design and testing.
 % Guidance: Include only factors that materially constrain architecture or verification.
-The application supports Windows, Ubuntu, and macOS at launch; other Linux distributions can be built on request. Our primary system is ubuntu and several aspects of our tooling are already optimized for ubuntu. We therefore aim for performance targets primarily on ubuntu, and only secondarily on the other operating systems. The software shall run on a high-performance lab workstations with specifications sufficient for sustained high-rate data capture and processing. GPU acceleration is planned for future versions but is not required initially. The system operates on localhost only, with all components running on the same machine. Storage must sustain the highest practical write speeds for the selected output format.
+    The application supports Windows, Ubuntu, and macOS at launch; other Linux distributions can be built on request. Our primary system is ubuntu and several aspects of our tooling are already optimized for ubuntu. We therefore aim for performance targets primarily on ubuntu, and only secondarily on the other operating systems. The software shall run on a high-performance lab workstations with specifications sufficient for sustained high-rate data capture and processing. GPU acceleration is planned for future versions but is not required initially. The system operates on localhost only, with all components running on the same machine. Storage must sustain the highest practical write speeds for the selected output format.
 
-\subsection{User Needs}
+    \subsection{User Needs}
 % user classes: Describe who will use the software and what are the expectations of the user?
 % “User needs” capture the *problem space* (what the people using the product are trying to accomplish) while “Features” capture the *solution space* (what the system will do to meet those needs).} Putting them in separate sections makes it possible to trace every feature back to a genuine user demand and to challenge any feature that has no such lineage.
-\begin{enumerate}
-  \item \textbf{Seamless integration with Serval for detector control whilst being exposed to only what they need}\\
+
+% might be worth reframing all of these as user stories.
+%   as a 4D-stem user I want a single button to start previewing my sample.
+
+    \small todo: to better pin down what the system need to do we could turn this into a list of user stories.
+
+    \begin{enumerate}
+        \item \textbf{Seamless integration with Serval for detector control whilst being exposed to only what they need}\\
         \textit{Rationale}: Serval must be used for detector control but minimizing the user interaction with Serval reduces the learning curve and enhances usability.
-  \item \textbf{Real-time visual feedback during scans}\\
+        \item \textbf{Real-time visual feedback during scans}\\
         \textit{Rationale}: Enables rapid navigation to regions of interest and immediate quality assessment. Also prevents wasted beam time.
-  \item \textbf{Ability to run essential offline analyses inside the application, such as offline image reconstruction methods}\\
+        \item \textbf{Ability to run essential offline analyses inside the application, such as offline image reconstruction methods}\\
         \textit{Rationale}: Enables quality assessment decisions without exporting large datasets to external tools.
-  \item \textbf{Acquire continuous or multi-frame (`Z-stack') scans}\\
+        \item \textbf{Acquire continuous or multi-frame (`Z-stack') scans}\\
         \textit{Rationale}: Lets users monitor radiation damage frame-by-frame and perform statistics based on multiple measurements in a region.
-  \item \textbf{Flexible detector masking (hardware or software) to select pixels for subsequent analysis.}\\
+        \item \textbf{Flexible detector masking (hardware or software) to select pixels for subsequent analysis.}\\
         \textit{Rationale}: Enables selection of diffraction bands for online and offline image reconstruction algorithms.
-  \item \textbf{Switchable scan modes to balance performance and user feedback trade-offs}\\
+        \item \textbf{Switchable scan modes to balance performance and user feedback trade-offs}\\
         \textit{Rationale}: Allocation of computational resources should be allocated differently depending on whether the user is searching for interesting features or whether they have already found them and want to acquire data for further analysis.
-  \item \textbf{Export raw \emph{or} processed data in open formats (e.g.\ SparseArray, HDF5, Zarr) and where appropriate, image data}\\
+        \item \textbf{Export raw \emph{or} processed data in open formats (e.g.\ SparseArray, HDF5, Zarr) and where appropriate, image data}\\
         \textit{Rationale}: Guarantees images can be saved and interoperability with downstream analysis suites such as LiberTEM, HyperSpy, and py4DSTEM.
-  \item \textbf{Real-time observability of acquisition-pipeline health (hit-rate, processing load, synchronization)}\\
+        \item \textbf{Real-time observability of acquisition-pipeline health (hit-rate, processing load, synchronization)}\\
         \textit{Rationale}: Gives user vital feedback that can be used to understand what is happening in the pipeline. This includes amounts of dropped data, per chip level hit rates and data throughput/latency rates.
-  \item \textbf{Dedicated 4D-STEM interface separate from the generic detector UI}\\
-  \textit{Rationale}: Build with a 4D-stem first mentality. Makes software 4d-stem centric, minimises cognitive load on our users needing to compete with more general use cases of the timepix3 detector and prevents accidental changes to routine detector operations. Separation of concerns.
-  \item \textbf{Immediate and clearly organized access to scan-generator controls}\\
-  \textit{Rationale}: Scan controls are some of the most important in 4D-STEM, they should be prevalent and obvious in the user workflow for better user experience, operating on the principle of least clicks to control your scan.
-\end{enumerate}
+        \item \textbf{Dedicated 4D-STEM interface separate from the generic detector UI}\\
+        \textit{Rationale}: Build with a 4D-stem first mentality. Makes software 4d-stem centric, minimises cognitive load on our users needing to compete with more general use cases of the timepix3 detector and prevents accidental changes to routine detector operations. Separation of concerns.
+        \item \textbf{Immediate and clearly organized access to scan-generator controls}\\
+        \textit{Rationale}: Scan controls are some of the most important in 4D-STEM, they should be prevalent and obvious in the user workflow for better user experience, operating on the principle of least clicks to control your scan.
+    \end{enumerate}
 
 
-\section{System Features and Requirements}
+    \section{System Features and Requirements}
 % What is the system supposed to do? What tasks should it perform? Start with "user need' decompose into atomic functional requirements. Each requirement should be testable.
 % Structure :
 %   Actor, Action, object and qualifier.
 % Functional requirements are system agnostic.
 
-
-\subsection{Functional Requirements}
-
-\subsubsection{Serval Interaction Layer}
-Serval is the control interface between the application and the detector.
-
-\begin{requirements}{SRV}
-
-\item \must \req{Attach or spawn Serval}
-  % What should happen
-  {On startup, the system shall either (a) attach to a reachable Serval instance at the configured host:port, or (b) spawn Serval as a child process whose lifetime is tied to the 4D-STEM UI.}
-  % acceptance criteria
-  {Attach succeeds or a child process is started; ownership is recorded in metadata. If attached, the UI does not terminate Serval on exit; if spawned, the UI terminates it cleanly on exit.}
-  % test
-  [Start with/without reachable Serval. Check attach vs spawn, and exit behavior. Fixture: A mini server that looks like Serval for the parts that matter (dashboard + status).]
-
-\item \must \req{Version negotiation}
-  % What should happen
-  {On initial connect, the system shall retrieve Serval's API version and compare it to the supported range. If out of range, the UI shall warn; if marked incompatible, operations requiring those features \could be blocked.}
-  % acceptance criteria
-  {Version captured in logs/metadata; \could correct warning/blocking per compatibility matrix.}
-  % test criteria
-  [Test: emulate 'too old/too new/incompatible` versions; assert warning banner and \could blocked actions.]
-
-\item \must \req{State subscription (push)}
-  % What should happen
-  {The client shall subscribe to Serval state changes (e.g., detector \{Disconnected, Connected, Idle, Running\}); \wont periodic polling for state shall not be used.}
-  % acceptance criteria
-  {State transitions correctly arrive}
-  % test criteria
-  [Test: push state changes from stub/mock serval; capture timing]
-
-\item \must \req{Detector-connected init sequence}
-  % What should happen
-  {Upon receiving \emph{detector\_connected}, the system shall perform: (1) upload DACs, (2) upload bad-pixel map (BPC), (3) set data destination, (4) load saved detector settings (e.g. bias) for this detector chipboard Id. Failures stop the sequence and surface a recoverable error.}
-  % acceptance criteria
-  {All four steps succeed, or the sequence aborts with a clear message; successful steps are idempotent (has no effect) on retry.}
-  % test criteria
-  [Test: inject failure at each step; assert stop + message; rerun to confirm idempotency of prior steps.]
-
-\item \must \req{Command error model}
-  % What should happen
-  {All Serval command failures shall be represented or mapped to a structured error with code/type, human message, machine key, and remediation hint.}
-  % acceptance criteria
-  {Errors in logs and UI contain structured fields; API errors use the documented schema.}
-  % test criteria
-  [Inspection/Test: trigger known errors; assert schema fields present and logged.]
-
-\item \must \req{Connectivity loss during acquisition}
-  % What should happen
-  {If the control connection to Serval drops during an active acquisition, the client shall detect loss, attempt reconnect, re-establish subscriptions, and abort the acquisition gracefully.}
-  % acceptance criteria
-  {Loss detected; after recovery, state is consistent the error is recorded in logs and the user is notified}
-  % test criteria
-  [Manual test: remove the ethernet cable mid run; verify abort gracefully path. Validate logs.]
-
-\item \must \req{Logging and correlation}
-  % What should happen
-  {Every Serval command, response, state change, and error shall be logged in the serval http log stored per workspace}
-  % acceptance criteria
-  {Logs contain request/response pairs}
-  % test criteria
-  [Send a command; locate the log and validate]
-
-\item \must \req{Transport keepalives}
-  % What should happen
-  {The client shall use protocol keepalives to detect dead connections without polling for state.}
-  % acceptance criteria
-  {Dead connections are detected within the configured interval; reconnect attempts follow.}
-  % test criteria
-  [Test: drop TCP silently; observe keepalive detection timeline and retry behavior.]
-
-\item \must \req{Endpoint configuration}
-  % What should happen
-  {Serval host, port, and transport shall be configurable in the UI; changes take effect on "accept" button press.}
-  % acceptance criteria
-  {Editing config changes the target; connections establish to the new endpoint after reconnect.}
-  % test criteria
-  [Test: change the end point to another socket running a different serval instance. Verify connectivity.]
-
-\item \wont \req{Equalization in client}
-  % What should happen
-  {The client shall not perform detector equalization; that function remains in Accos.}
-  % acceptance criteria
-  {No equalization commands exist; UI offers no equalization controls.}
-
-\item \wont \req{Detector orientation in client}
-  % What should happen
-  {The client shall not manage detector orientation.}
-  % acceptance criteria
-  {No orientation commands exist; UI offers no orientation controls.}
-  % test criteria
-  [Inspection.]
-
-\end{requirements}
-
-
-\subsubsection{Online Image Reconstruction}
-\begin{requirements}{OIR}
-
-\item \must \req{Real-time vADF reconstruction}
-  % what will be done
-  {Raw event data received from Serval via TCP shall be processed in real time into images using the vADF algorithm. Processing is performed by \emph{luna-stem}/\emph{luna-core} and displayed in the 4D-STEM UI. For selection of pixels that contribute to final vADF image, an annular ROI shall be used (\cref{req:ui:roi})}.
-  % acceptance criteria
-  {For dwell times \(\ge 1\ \mu s\) at 320MHz per second the image shall display cleanly and without lagging or losing data. \textit{It is unknown whether this target is realistic}}
-  % test criteria
-  [Test: replay a recorded \(512\times512\), \(1\,\mu s\) dwell event stream and measure performance]
-
-\item \must \req{Preview non-interference}
-  % what will be done
-  {The preview function has a cost so it inevitably reduces other taks that the computer can do at the same time. However the preview function must not reduce performance to such a point that data integrity is compromised.}
-  % acceptance criteria
-  {With preview enabled, acquisition hit-rate, mapping accuracy, and dropped-event counts remain within \(\pm x\%\) (e.g. some currently unknown percentage) of preview-disabled baseline on identical runs.}
-  % test criteria
-  [Test: Compare runs between the preview on/off with identical replay date; compare hit-rate, mis-maps, and drop data; assert within tolerance.]
-
-\item \should \req{GPU-accelerated vADF}
-  % what will be done
-  {Provide a GPU-accelerated implementation of vADF on supported hardware. Especially when targeting tpx4 (in future) which has x5 the performance requirements of a tpx3 turbo, a GPU backend should be built}
-  % acceptance criteria
-  {On compatible GPUs, performance increase by \(\ge x\%\) vs. CPU-only under the same conditions; outputs match CPU within tolerance. A realistic and precise value of \(x\) is currently unknown. }
-  % test criteria
-  [Test: run CPU vs. GPU on same dataset; measure latency reduction; ensure the same results are achieved.]
-
-\end{requirements}
-
-
-
-\subsubsection{Offline Image Reconstruction}
-\begin{requirements}{OFR}
-
-\item \must \req{Single CBED display}
-  % what will be done
-  {When a user selects a probe position, the system shall display the corresponding CBED diffraction pattern from disk.}
-  % acceptance criteria
-  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
-  % test criteria
-  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
-
-\item \must \req{Average CBED (all)}
-  % what will be done
-  {The system shall compute and display the Average CBED over all probe positions in the scan.}
-  % acceptance criteria
-  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
-  % test criteria
-  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
-
-\item \must \req{Offline vADF}
-  % what will be done
-  {The system shall recompute vADF from stored data by summing intensities within the selected detector region for each probe position. The selection ROI shall be annular.}
-  % acceptance criteria
-  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
-  % test criteria
-  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
-
-\item \must \req{iCOM}
-  % what will be done
-  {Provide offline iCOM reconstruction on supported datasets. Performance must be "reasonable" but not heavy duty, like the online algorithms}
-  % acceptance criteria
-  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
-  % test criteria
-  [Test: run iCOM; verify axis metadata, units; compare against a validated reference implementation on a fixture.]
-
-\item \should \req{iDPC}
-  % what will be done
-  {Provide offline iDPC reconstruction on supported datasets. Performance must be "reasonable" but not heavy duty, like the online algorithms}
-  % acceptance criteria
-  {Image is computed from offline data and displayed within a reasonable time (100ms max)}  % test criteria
-  % test criteria
-  [Test: run iDPC; verify axis metadata, units; compare against a validated reference implementation on a fixture.]
-
-\item \must \req{Asynchronous execution + progress}
-  % what will be done
-  {Offline operations shall run asynchronously with progress reporting and possibility of user cancellation. Partial outputs are marked incomplete with a warning and message.}
-  % acceptance criteria
-  {Long-running tasks ($>$500 ms) show progress; cancel stops computation leaves no corrupt outputs. Failure handled gracefully.}
-  % test criteria
-  [Test: start each algorithm; observe progress; cancel mid-run; assert timely stop and clean state.]
-
-\item \could \req{Random-access readiness}
-  % what will be done
-  {If needed for performance, maintain an index that maps probe position to data blocks/offsets next to processed data output to facilitate fast lookup and retrieval of data for building images (such as CBED).}
-  % acceptance criteria
-  {Index builds after acquisition in the background and stored on disk for reuse. }
-  % test criteria
-  [Test: Index identifies correct hits and indexing occurs in 'reasonable` time. ]
-
-\item \wont \req{Ptychography (offline)}
-  % what will be done
-  {Offline ptychography is out of scope.}
-  % acceptance criteria
-  {No UI/CLI entry points for ptychography exist.}
-
-
-\item \wont \req{4D-STEM EELS (offline)}
-  % what will be done
-  {Offline 4D-STEM EELS is out of scope.}
-  % acceptance criteria
-  {No UI/CLI entry points for EELS exist.}
-
-\end{requirements}
-
-\subsubsection{Z-stacking Frames}
-\begin{requirements}{ZST}
-
-\item \should \req{Fixed-length Z stack}
-  % what will be done
-  {When the user sets \(Z>1\) and presses \emph{Start (Acquire)}, the system shall execute exactly \(Z\) full probe-grid scans. Every detector event shall be assigned to frame and probe position. }
-  % acceptance criteria
-  {Exactly \(Z\) completed frames are recorded; for each completed frame, all expected probe coordinates are present once.}
-  % test criteria
-  [Test: run \(Z=3\) on a test dataset; verify frame count, per-frame coordinate coverage, and sorter counters; assert zero mis-assign/unassigned.]
-
-\item \should \req{Continuous Z mode}
-  % what will be done
-  {When Continuous Z mode is selected, the system shall repeat full probe-grid scans until the user issues \emph{Stop} or an automatic stop condition occurs (e.g., disk guard). Frames in continuous mode shall use a monotonically increasing \(\textit{frame\_id}\in\{0,1,2,\dots\}\).}
-  % acceptance criteria
-  {Acquisition runs until Stop or disk guard triggers; no partial frames are reported as complete; the final manifest lists all completed \(\textit{frame\_id}\) values consecutively without gaps.}
-  % test criteria
-  [Test: run 60 s continuous; issue Stop; validations]
-
-\item \should \req{Frame output writing}
-  % what will be done
-  {Frame data shall be written to disk in the user-selected format(s).}
-  % acceptance criteria
-  {After power-loss or forced abort during a frame, partial frame data is "salvaged".}
-  % test criteria
-  [Test: fault-inject mid-frame (kill process) and verify.]
-
-
-\end{requirements}
-
-
-\subsubsection{Output and Raw Data Collection}
-\begin{requirements}{OUT}
-
-\item \could \req{Acquire preview policy}
-  % what will be done
-  {If necessary, and depending on the performance characteristics of the system (yet to be determined), the final acquisitions shall run with preview disabled by default. If explicitly enabled, the user shall be warned before they acquire that preview + acquisition on the same computer can lead to data loss.}
-  % acceptance criteria
-  {Run (Acquire) with and without the preview pipeline. Measure performance metrics.}
-  % % test criteria
-  % [Test: Compare identical replays; compare counters; assert within tolerance.]
-
-\item \must \req{Raw data immutability}
-  % what will be done
-  {Raw event data shall be written to disk exactly as received from Serval (ordering and content preserved), with no corrections applied in-line by the client or Serval.}
-  % acceptance criteria
-  {Raw-file checksums match a capture of the a known dataset}
-
-\item \must \req{Corrections policy}
-  % what will be done
-  {Corrections required for scientific correctness (e.g., tram-lane and PLL corrections) shall be applied only in reconstructions (online/offline), never to raw. Correction parameters are retrieved from Serval (or calibration files) and recorded in provenance.}
-  % acceptance criteria
-  {Raw remains unmodified; derived outputs include correction names, versions, and parameters; results match a reference .}
-  % test criteria
-  [Test: run offline vADF/iCOM with/without corrections; verify provenance; compare to reference.]
-
-\item \wont \req{Timewalk correction in raw}
-  % what will be done
-  {Timewalk correction shall not be applied to raw event data. The time resolution is usually not small enough to have a huge impact.}
-  % acceptance criteria
-  {No timewalk steps present in raw pipeline; any timewalk handling appears only in derived workflows (if ever added).}
-  % test criteria
-  [Inspection.]
-
-\item \must \req{Sparse event export (LiberTEM)}
-  % what will be done
-  {Provide a sparse event export compatible with LiberTEM (indices/values plus shape/coords).}
-  % acceptance criteria
-  {Exported dataset opens in LiberTEM and yields expected hit counts/statistics.}
-  % test criteria
-  [Test: manual load in LiberTEM; compare counters to manifest.]
-
-\item \should \req{Zarr export}
-  % what will be done
-  {Provide a Zarr export for 4D data (e.g., \([H,W,Q_x,Q_y]\)) with chunking and compression per DATA-FMT; write online if feasible, else offline converter.}
-  % acceptance criteria
-  {Zarr opens in supported Python stacks (dask/xarray); shape/chunks/attrs match spec.}
-  % test criteria
-  [Test: open with xarray; check attrs; compare slices to reference.]
-
-\item \should \req{HyperSpy HDF5 export}
-  % what will be done
-  {Provide HyperSpy-compatible HDF5 export for reconstructed data; write online if feasible, else via offline converter.}
-  % acceptance criteria
-  {File loads in HyperSpy; axis metadata/units correct.}
-  % test criteria
-  [Test: open in HyperSpy; verify axes/units; compare numerics.]
-
-\item \must \req{Image export (2D)}
-  % what will be done
-  {Any 2D image produced (e.g., vADF, CBED, iCOM maps) shall be exportable to TIFF and PNG; 16-bit TIFF supported; metadata embedded where format allows.}
-  % acceptance criteria
-  {Exports succeed; TIFF bit depth correct; embedded tags include units and scaling; }
-  % test criteria
-  [Test: export samples; read back; verify tags/bit depth and pixel stats of known dataset. Visually look at the images..]
-
-\item \could \req{ROI-based export}
-  % what will be done
-  {For data reduction, users may export subsets (ROIs in real space or diffraction space) to supported formats without duplicating full datasets.}
-  % acceptance criteria
-  {Exports contain only selected indices/pixels; metadata record the parent dataset and ROI definition.}
-  % test criteria
-  [Test: export ROI; verify indexing and metadata linkage.]
-
-\item \could \req{Offline format converters}
-  % what will be done
-  {Provide CLI/GUI converters among supported formats}
-  % acceptance criteria
-  {Converters preserve values; progress + cancellation supported.}
-  % test criteria
-  [Test: round-trip conversions; compare checksums/tolerances; cancel mid-run.]
-
-\item \must \req{Directory layout and naming}
-  % what will be done
-  {Acquisitions shall use a standardized directory layout and naming convention. Users can modify their pattern with a selection of template strings. Datetime, run ID, sample ID are examples.}
-  % acceptance criteria
-  {Created structure matches spec; names are unique and sortable.}
-  % test criteria
-  [Inspection/Test: create run; validate layout against schema.]
-
-\item \could \req{Compression and chunking}
-  % what will be done
-  {For formats supporting it (Zarr/HDF5), chunking and compression shall be implemented for offline use.}
-  % acceptance criteria
-  {Resultant compressed data shall exist after }
-  % test criteria
-  [Test: round trip must work as expected]
-
-\end{requirements}
-
-
-
-
-\subsubsection{Pixel Masking}
-\begin{requirements}{PMK}
-
-\item \must \req{Software masking}
-  % what will be done
-  {The system shall support software inclusion zones or `mask' defined on the detector pixel grid (rectangular, circular, and annular at minimum). Software masks are applied in image reconstruction; raw data remain unchanged.}
-  % acceptance criteria
-  {Masks can be created/edited/removed when idle; during acquisition masks are immutable. Mask definitions (shape + parameters + schema version) are stored in measurement metadata and honored by online/offline reconstruction.}
-  % test criteria
-  [Test: define each shape; acquire; verify masked regions contribute zero; inspect metadata JSON for shapes/schema.]
-
-\item \could \req{Hardware masking}
-  % what will be done
-  {The system shall support hardware masking by uploading a pixel configuration via Serval. }
-  % acceptance criteria
-  {After applying a hardware mask, hit counts from masked pixels drop to zero.}
-  % test criteria
-  [Test: apply/revert mask via API; compare pre/post hit maps; assert zero hits in masked region.]
-
-\item \must \req{Mask mode selection}
-  % what will be done
-  {If both hardware and software masking are available, the UI shall allow selecting the active mode; switching is permitted only when idle.}
-  % acceptance criteria
-  {Exactly one mode is active; controls are disabled during acquisition; mode is recorded in metadata.}
-  % test criteria
-  [Test: toggle modes while idle vs. running; assert prevention whilst acquiring and metadata.]
-
-\item \must \req{Mask visualization}
-  % what will be done
-  {Masks shall be visibly overlaid on the viewport; hardware and software masks use distinct visual styles.}
-  % acceptance criteria
-  {Overlay shows correct bounds; legend indicates active mode; visibility toggle works.}
-  % test criteria
-  [Inspection/Test: draw masks; verify overlay and legend.]
-
-\item \must \req{Autoload masks}
-  % what will be done
-  {When loading an existing dataset/measurement, previously saved masks shall autoload and appear in the UI.}
-  % acceptance criteria
-  {Opening a dataset renders masks from metadata; reconstruction honors them.}
-  % test criteria
-  [Test: save with masks; reopen; verify overlay and effect.]
-
-\end{requirements}
-
-
-\subsubsection{Acquisition Modes}
-\begin{requirements}{ACQ}
-
-\item \must \req{Search mode}
-  % what will be done
-  {Search mode shall render real-time preview (vADF) and, by default, shall not persist raw events or reconstructions.}
-  % acceptance criteria
-  {In Search, no raw files are created.}
-  % test criteria
-  [Test: run Search; verify absence of files and presence of preview vADF.]
-
-\item \must \req{Acquire mode}
-  % what will be done
-  {Acquire mode shall persist raw data data to disk in Sparse matrix format. Preview is disabled by default; if enabled, it must not interfere with data acquisition.}
-  % acceptance criteria
-  {Files are created; preflight disk guard enforced; preview (if enabled) meets works without hurting data integrity.}
-  % test criteria
-  [Test: run Acquire with/without preview.]
-
-\item \must \req{Mode transitions}
-  % what will be done
-  {Mode selection shall be explicit and visible; mode changes are blocked while an acquisition is active.}
-  % acceptance criteria
-  {Attempting to change mode during an active run is prevented with a clear message.}
-  % test criteria
-  [Test: switch modes mid-run; assert block + message.]
-
-\item \should \req{Parameter locking in Acquire}
-  % what will be done
-  {On \emph{Start (Acquire)}, scan parameters and masks are locked for the duration of the run.}
-  % acceptance criteria
-  {Controls affecting acquisition parameters become read-only; changes take effect only on the next run.}
-  % test criteria
-  [Test: attempt edits during Acquire; assert no effect.]
-
-\end{requirements}
-
-
-
-
-\subsubsection{Scan Generator}
-\begin{requirements}{SCN}
-
-\item \must \req{Backend selection}
-  % what will be done
-  {The system shall support selecting a scan-generator backend from a configured list; unavailable backends appear disabled.}
-  % acceptance criteria
-  {All backends work with their respective scan generators when connected}
-  % test criteria
-  [Test: scan integration test suite should pass with any backend. ]
-
-\item \must \req{Start-time synchronization}
-  % what will be done
-  {Detector acquisition start and scan start shall be synchronized at the start-of-scan boundary. How do we measure this?}
-  % acceptance criteria
-  {On qualified hardware, measured start skew \(|\Delta t|\le 1\,\mu s\) over 100 trials; failures surface as warnings and block Acquire if policy requires.}
-  % test criteria
-  [Test: instrument start-of-scan and detector-gate signals; compute skew distribution; assert bound.]
-
-\item \req{ROI/geometry translation}
-  % what will be done
-  {Scan generator shall accept ROI-derived geometries and produce matching probe grids for raster scan.}
-  % acceptance criteria
-  {Generated grids match requested \(H\times W\) (per rounding rules).}
-  % test criteria
-  [Test: send multiple ROIs; verify grid coverage.]
-
-\item \must \req{Graceful stop}
-  % what will be done
-  {On \emph{Stop}, the scan generator shall honor the `stop now' and `stop at frame boundary' semantics from Z-stacking.}
-  % acceptance criteria
-  {Observed behavior matches selected stop mode.}
-  % test criteria
-  [Test: stop mid-frame with both options; verify manifests.]
-\end{requirements}
-
-
-\subsubsection{Observability and Pipeline Health}
-\begin{requirements}{OBS}
-
-\item \must \req{Metric definitions}
-  % what will be done
-  {Performance metrics (hit-rate, throughput in bits/s, ingest→present latency) shall be computed per Appendix }
-  % acceptance criteria
-  {Implementations use the formulas and windows; unit tests validate computations on fixtures.}
-  % test criteria
-  [Test: feed synthetic counters; verify computed metrics match reference.]
-
-\item \must \req{Aggregation levels}
-  % what will be done
-  {Statistics shall be computed for the whole detector and per-chip.}
-  % acceptance criteria
-  {UI/API exposes both aggregation levels; chip IDs match detector layout.}
-  % test criteria
-  [Test: compare totals to sum of chips; assert equality.]
-
-\item \must \req{Hit-rate UI cadence}
-  % what will be done
-  {While Running or Previewing, the UI shall update hit-rate at least once per second.}
-  % acceptance criteria
-  {Observed update interval \(\le 1.0\,\mathrm{s}\) over a 60-s run.}
-  % test criteria
-  [Test: capture UI updates; compute intervals.]
-
-\item \should \req{Per-stage throughput (opt-in)}
-  % what will be done
-  {When observability is enabled, each pipeline stage shall report throughput in bytes/s and queue depths; this view is off by default.}
-  % acceptance criteria
-  {Opt-in UI shows per-stage throughput and queues; disabling hides it; enabling does not exceed overhead limits.}
-  % test criteria
-  [Test: toggle feature flag; verify metrics appear/disappear; check overhead.]
-
-\item \must \req{Latency reporting}
-  % what will be done
-  {The system shall compute ingest→present latency (and ingest→disk latency for Acquire) and update a 1-s rolling mean every 0.5 s.}
-  % acceptance criteria
-  {Numbers match PERF-DEF computations; update cadence holds.}
-  % test criteria
-  [Test: replay fixture; verify rolling stats and cadence.]
-
-\item \must \req{Observability overhead bound}
-  % what will be done
-  {With observability enabled, median ingest→present latency shall not degrade by more than \(+10\,\mathrm{ms}\) vs. baseline.}
-  % acceptance criteria
-  {A/B runs differ by \(\le 10\,\mathrm{ms}\) median; throughput unchanged within \(\pm 0.1\%\).}
-  % test criteria
-  [Test: A/B toggle; assert limits.]
-
-\item \could \req{Scan–detector sync metric}
-  % what will be done
-  {Provide a sync metric estimating jitter between scan-box timing and detector hit timestamps, e.g., \(J=\mathrm{abs}(t_{\text{hit@40MHz}}-t_{\text{scan}})\), with histogram and summary stats.}
-  % acceptance criteria
-  {Metric and histogram available when hardware exposes both clocks; results recorded in telemetry.}
-  % test criteria
-  [Test: on capable hardware, compute \(J\); verify histogram export.]
-
-\item \must \req{Dropped-data visibility}
-  % what will be done
-  {Dropped/lost/mis-mapped event counters shall be tracked per second and surfaced in UI and logs, with clear warnings when non-zero.}
-  % acceptance criteria
-  {Injected drops produce visible warnings and non-zero counters; counters reset per run and are written to manifest.}
-  % test criteria
-  [Test: inject drops; verify UI/log/manifest.]
-
-\end{requirements}
-
-
-\subsubsection{Data Integrity at Extreme Rates}
-\begin{requirements}{INT}
-
-\item \must \req{Mapping accuracy at max qualified rate}
-  % what will be done
-  {For hit-rate \(\le 320\,\mathrm{Mhits/s}\) and dwell \(\le 1\,\mu s\), the system shall assign \(\ge 99.999999\%\) of detector hits to the correct probe coordinate.}
-  % acceptance criteria
-  {On the INT-1 fixture (Appendix DATASETS), measured correct-assignments fraction \(\ge 0.99999999\).}
-  % test criteria
-  [Test: replay INT-1 with ground-truth mapping; compute fraction; assert bound.]
-
-\item \must \req{Loss/duplication bound}
-  % what will be done
-  {Under the same conditions, lost or duplicated hits shall be \(\le 0.001\%\) of total hits.}
-  % acceptance criteria
-  {Counters and reconciliation against ground-truth yield \(\le 1\times10^{-5}\) fraction lost+dup.}
-  % test criteria
-  [Test: reconcile emitted hits vs. truth; assert bound.]
-
-\item \must \req{Sorter persistence latency}
-  % what will be done
-  {The sorter shall persist each mapped hit within \(0.5\,\mu s\) (median) of the detector-provided timestamp, measured per Appendix PERF-TIMEBASE.}
-  % acceptance criteria
-  {Median persist delay \(\le 0.5\,\mu s\) on INT-1; P95 reported for visibility.}
-  % test criteria
-  [Test: align timebases; measure per-hit delay; assert median bound.]
-
-\item \must \req{Per-second telemetry}
-  % what will be done
-  {While acquiring, the system shall publish per-second counters of total hits, lost hits, mis-mapped hits, and median latency via the telemetry bus.}
-  % acceptance criteria
-  {Telemetry stream present at 1 Hz; fields populated; values match internal counters.}
-  % test criteria
-  [Test: subscribe; compare samples to internal metrics.]
-
-\end{requirements}
-
-\subsubsection{UI Shell}
-
-This section describes the UI counterpart of the feature only. Every UI component is backed by a non-UI component and its business logic is tested away from the UI in the form of unit/integration/end-to-end testing.
-
-\begin{requirements}{UI}
-
-  \item \must \req{Standalone launch}
-  % what will be done
-  {The application shall launch as a standalone process when the user double-clicks the 4D-STEM UI icon or selects it from the native OS menu.}
-  % acceptance
-  {Main window becomes interactive; a single primary process is visible in the OS process list.}
-
-  \item \must \req{Restricted detector controls}
-  % what will be done
-  { The UI shall display only the detector controls listed in Appendix UI-A1 (whitelist).}
-  % acceptance criteria
-  {Across all screens and states, only whitelisted controls appear; no navigation path exposes non-whitelisted controls.}
-
-  \item \must \req{Derived detector settings}
-  % what will be done
-  { Where specified in Appendix UI-A2, detector settings shall be derived automatically from scan parameters without additional user interaction. If the setting can be abstracted from the user, then it should be.}
-  % acceptance criteria
-  {Changing any covered scan parameter updates the mapped detector setting. The change is reflected in serval}
-
-  \item \must \req{Scan engine selector}
-  % what will be done
-  {The UI shall present a control to select which scan engine is in use, always visible. Supported scan box units are present in the drop down list but disabled if not found.}
-  % acceptance criteria
-  {Control is visible without opening dialogs; selection persists to the active measurement context.}
-
-  \item \must \req{Scan geometry controls}
-  % what will be done
-  {The UI shall present controls for geometry including: scan height and width (in probe positions), prescan x/y, always visible.}
-  % acceptance criteria
-  {Editing values updates the pending scan geometry such that they take effect when a stem acquisition is run.}
-
-  \item \must \req{Dwell control}
-  % what will be done
-  {The UI shall present a dwell-time control, always visible.}
-  % acceptance criteria
-  {Value changes propagate to pending acquisition parameters and appear in the run summary / logs.}
-
-  \item \must \req{Z-frames control}
-  % what will be done
-  {The UI shall present a control for the number of frames \(Z\) (frame = one full scan of \(H\times W\)), always visible.}
-  % acceptance criteria
-  {\(Z\) appears in the run summary and is written to measurement metadata.}
-
-  \item \must \req{Start (Preview)}
-  % what will be done
-  {The UI shall provide a Start (Search/Preview) control.}
-  % acceptance criteria
-  {Activating enters Preview mode and renders live vADF; control indicates running state.}
-
-  \item \must \req{Start (Acquire)}
-  % what will be done
-  {The UI shall provide a Start (Acquire) control.}
-  % acceptance criteria
-  {Activating starts acquisition with current parameters and writes data to the selected output format(s).}
-
-  \item \must \req{Output Location}
-  % what will be done
-  {The UI presents a widget to collect output location. The widget accepts text input and selection from the native filesystem widget}
-  % acceptance criteria
-  {Acquisition puts the data and metadata into this location}
-
-  \item \must \req{Output format}
-  % what will be done
-  {A dropdown containing supported output formats is presented and always visible.}
-  % acceptance criteria
-  {Output format is a field in the metadata. After acquisition the data shall be in the requested location in the required format}
-
-  \item \must \req{Workspaces}
-  % what will be done
-  {Users shall be able to create/open a workspace; a workspace can contain multiple measurements.}
-  % acceptance criteria
-  {New/open actions work; workspace path is stored in recent list; multiple measurements list correctly.}
-
-  \item \must \req{Measurement metadata}
-  % what will be done
-  {Each measurement shall have metadata persisted as JSON (schema defined in Data Formats), accessible via the UI but hidden by default. All scan and detector parameters are included in the measurement metadata plus comments written by users themselves.}
-  % acceptance criteria
-  {'Show metadata` displays a measurement viewer, hidden by default; file exists on disk with schema version and passes schema validation.}
-
-  \item \must \req{Stop button}
-  % what will be done
-  {The UI shall provide a Stop control that is enabled only while Preview or Acquire is running.}
-  % acceptance criteria
-  {Disabled when idle; enabled within 200 ms of run start; returns UI to idle on activation.}
-
-  \item \must \req{Stop semantics}
-  % what will be done
-  {When the user presses \emph{Stop}, the system shall finish the current probe position and then stop. A preference 'Stop at frame boundary` shall, when enabled, finish the current frame before stopping.}
-  % acceptance criteria
-  {Default behavior ends within one probe after Stop; with the preference enabled, the run ends at the next frame boundary; manifests reflect a clean final frame state.}
-  % test criteria
-  [Test: trigger Stop mid-frame with option off/on; verify end position and manifest entries.]
-
-
-  \item \label{req:ui:roi} \must \req{ROIs}
-  % what will be done
-  {The user shall be able to create, update/move and remove rectangular, circular or annular ROIs by click-and-drag on the viewport.}
-  % acceptance criteria
-  {ROI appears with handles; coordinates shown in status.}
-
-  \item \must \req{ROI to scan geometry}
-  % what will be done
-  {The system shall translate a rectangular ROI into an equivalent scan geometry. ROIs snap to the pixel grid so values derived are integers.}
-  % acceptance criteria
-  {Computed \(H\) and \(W\) equal ROI extents; pending scan parameters update accordingly.}
-
-  \item \must \req{ROI for diffraction views}
-  % what will be done
-  {The system shall allow using ROI selections to build diffraction images (e.g. averaged CBED of the selection).}
-  % acceptance criteria
-  {Selecting a rectangular ROI automatically computed the average CBED}
-
-  \item \could \req{ROI expanded view}
-  % what will be done
-  {A ROI shall be expandable via invoking the 'right click > Expand ROI` function. The system produces a full size, zoomed in image from the selection and optionally enables updating the scan geometry to reflect the new sub-region}
-  % acceptance criteria
-  {Right-click > Expand ROI opens the new view of the current image. The new view has the correct bounds and scan is updated.}
-
-  \item \could \req{Dockable controls}
-  % what will be done
-  {Control panels shall be dockable/undockable and toggleable via the View menu. A default layout is exposed for return to factory settings. }
-  % acceptance criteria
-  {Panels can be moved, floated, and toggled.}
-
-  \item \must \req{Persistence}
-  % what will be done
-  {UI settings (layout, last workspace, panel visibility, scan control values) shall persist across sessions and at the granularity of a workspace. Detector specific controls persist per workstation, rather than per workspace.}
-  % acceptance criteria
-  {Close/reopen restores prior state on the same machine/user.}
-
-  \item \must \req{Connectivity loss handling}
-  % what will be done
-  {On loss of connectivity to Serval, scan engine, or detector, the UI shall display status and attempt reconnect every 1 s until success.}
-  % acceptance criteria
-  {Observed retry interval for at least 10 min; status banner visible.}
-
-  \item \must \req{Startup without connectivity}
-  % what will be done
-  {If no connectivity is available at startup, the UI shall present a non-blocking status and allow offline configuration. Any setting or control relating to the unconnected device or server shall be blocked when not connected.}
-  % acceptance criteria
-  {Main window is usable; status banner visible; configuration pages accessible. Scan controls disabled when no scan generator available. Controls that drive Serval are disabled when serval is not available.}
-
-  \item \must \req{Logging}
-  % what will be done
-  {The UI shall write a log of important events to disk and to console; log level is controlled by environment variable \texttt{LOG\_LEVEL}. Log location is user-configurable under \texttt{File > Preferences} but defaults to within the workspace configuration.}
-  % acceptance criteria
-  {Different \texttt{LOG\_LEVEL} values change verbosity; files created at default paths; preference overrides path; Serval redirection present.}
-
-  \item \must \req{Disk space guard (preflight + warning)}
-  % what will be done
-  {On \emph{Start (Acquire)}, the system shall evaluate free space on the selected target volume. If free space is at or below the near-full threshold (default 5\% of the volume), the system shall present a low-space warning before starting. If the volume reports 0 writable bytes free, the acquisition shall not start.}
-  % acceptance criteria
-  {On pressing \emph{Start (Acquire)}: (a) if free space > threshold, acquisition begins; (b) if free space \(\le\) threshold, a low-space warning is shown and the user may proceed; (c) if free space \(=0\), acquisition is blocked and an error is shown. All cases are recorded in the log.}
-
-  \item \must req{Detector info and health available}
-  % what will be done
-    {UI shall display from view > detector health a UI panel describing the detectors information from serval}
-  % Acceptance criteria
-    {The UI displays accurate information}
-
-\end{requirements}
-
-
-\subsection{Non-Functional Requirements}
-
-%\subsubsection{Performance}
-%\subsubsection{Scalability}
-%\subsubsection{Extensibility}
-%\subsubsection{Maintainability}
-%\subsubsection{Portability}
-%\subsubsection{Usability}
-%\subsubsection{Testability}
-%\subsubsection{Modularity}
-
-%\subsubsection{Usability, Reliability}
-
-\subsection{Legal and Regulatory Requirements}
-Licenses. What can we do? What can't we do?
-
-
-
-
-
-\section{Appendices}
-\subsection{Glossary}
-\subsection{Use Cases and Diagrams}
-
-
+    \subsection{Functional Requirements}
+
+    \subsubsection{Serval Integration}
+    Serval is the control interface between the application and the detector.
+
+    \begin{requirements}{SRV}
+
+        \item \must \req{Connect or spawn Serval}
+        % What should happen
+        {On startup, the system shall either (a) connect to a reachable Serval instance at the configured host:port, or (b) spawn Serval as a child process whose lifetime is tied to the 4D-STEM UI.}
+        % acceptance criteria
+%  {Attach succeeds or a child process is started; ownership is recorded in metadata. If attached, the UI does not terminate Serval on exit; if spawned, the UI terminates it cleanly on exit.}
+%  % test
+%  [Start with/without reachable Serval. Check attach vs spawn, and exit behavior. Fixture: A mini server that looks like Serval for the parts that matter (dashboard + status).]
+
+        \item \must \req{Version negotiation}
+        % What should happen
+        {On initial connect, the system shall retrieve Serval's API version and compare it to the supported range. If out of range, the UI shall warn the user.}
+%  % acceptance criteria
+%  {Version captured in logs/metadata; \could correct warning/blocking per compatibility matrix.}
+%  % test criteria
+%  [Test: emulate 'too old/too new/incompatible` versions; assert warning banner and \could blocked actions.]
+
+        \item \must \req{State subscription (push)}
+        % What should happen
+        {The client shall subscribe to Serval state changes (e.g., detector \{Disconnected, Connected, Idle, Running\}). \wont The system shall not use periodic polling to keep up to date with serval connectivity status.}
+%  % acceptance criteria
+%  {State transitions correctly arrive}
+%  % test criteria
+%  [Test: push state changes from stub/mock serval; capture timing]
+
+        \item \must \req{Detector connection sequence}
+        % What should happen
+        {Upon receiving \emph{detector\_connected} signal, the system shall: (1) upload DACs, (2) upload pixel configuration (BPC), (3) set data destination, (4) load saved detector settings (e.g. bias) for this detector chipboard Id. Failures stop the sequence and surface a recoverable error with instructions on how to resolve the issue.}
+%  % acceptance criteria
+%  {All four steps succeed, or the sequence aborts with a clear message; successful steps are idempotent (has no effect) on retry.}
+%  % test criteria
+%  [Test: inject failure at each step; assert stop + message; rerun to confirm idempotency of prior steps.]
+
+        \item \must \req{Serval Command error model}
+        % What should happen
+        {All Serval command failures shall be presented to the user as human readable message and remediation hint.}
+%  % acceptance criteria
+%  {Errors in logs and UI contain structured fields; API errors use the documented schema.}
+%  % test criteria
+%  [Inspection/Test: trigger known errors; assert schema fields present and logged.]
+
+        \item \must \req{Connectivity loss during acquisition}
+        % What should happen
+        {If the control connection to Serval drops during an active acquisition the acqiusition is considered invalid. The system shall detect connection loss and abort the acquisition gracefully.}
+%  % acceptance criteria
+%  {Loss detected; after recovery, state is consistent the error is recorded in logs and the user is notified}
+%  % test criteria
+%  [Manual test: remove the ethernet cable mid run; verify abort gracefully path. Validate logs.]
+
+        \item \must \req{Logging and correlation}
+        % What should happen
+        {Every Serval command, response, state change, and error shall be logged in the serval http log stored per workspace}
+%  % acceptance criteria
+%  {Logs contain request/response pairs}
+%  % test criteria
+%  [Send a command; locate the log and validate]
+
+        \item \must \req{Transport keepalives}
+        % What should happen
+        {The client shall use protocol keepalives to detect dead connections without polling for state.}
+%  % acceptance criteria
+%  {Dead connections are detected within the configured interval; reconnect attempts follow.}
+%  % test criteria
+%  [Test: drop TCP silently; observe keepalive detection timeline and retry behavior.]
+
+        \item \must \req{Endpoint configuration}
+        % What should happen
+        {Serval host, port, and transport addresses shall be configurable in the UI; changes take effect on "accept" button press.}
+%  % acceptance criteria
+%  {Editing config changes the target; connections establish to the new endpoint after reconnect.}
+%  % test criteria
+%  [Test: change the end point to another socket running a different serval instance. Verify connectivity.]
+
+        \item \wont \req{Equalization in client}
+        % What should happen
+        {The client shall not perform detector equalization; that function remains in Accos.}
+        % acceptance criteria
+%  {No equalization commands exist; UI offers no equalization controls.}
+
+        \item \wont \req{Detector orientation in client}
+        % What should happen
+        {The client shall not manage detector orientation.}
+%  % acceptance criteria
+%  {No orientation commands exist; UI offers no orientation controls.}
+%  % test criteria
+%  [Inspection.]
+
+    \end{requirements}
+
+    \subsubsection{Online Image Reconstruction}
+    \begin{requirements}{OIR}
+
+        \item \must \req{Real-time vADF reconstruction}
+        % what will be done
+        {Raw event data received from Serval via TCP shall be processed in real time into images using the vADF algorithm. Processing is performed by \emph{luna-stem}/\emph{luna-core} and displayed in the 4D-STEM UI. For selection of pixels that contribute to final vADF image, an annular ROI shall be used (\cref{req:ui:roi})}.
+        % acceptance criteria
+%  {For dwell times \(\ge 1\ \mu s\) at 320MHz per second the image shall display cleanly and without lagging or losing data.
+%  % test criteria
+%  [Test: replay a recorded \(512\times512\), \(1\,\mu s\) dwell event stream and measure performance]
+
+        \item \must \req{Preview non-interference}
+        % what will be done
+        {Preview must not reduce performance to such a point that data integrity is compromised. }
+        % acceptance criteria
+%  {With preview enabled, acquisition hit-rate, mapping accuracy, and dropped-event counts remain within \(\pm x\%\) (e.g. some currently unknown percentage) of preview-disabled baseline on identical runs.}
+%  % test criteria
+%  [Test: Compare runs between the preview on/off with identical replay date; compare hit-rate, mis-maps, and drop data; assert within tolerance.]
+
+        \item \should \req{GPU-accelerated vADF}
+        % what will be done
+        {Provide a GPU-accelerated implementation of vADF on supported hardware. Especially when targeting tpx4 (in future) which has x5 the performance requirements of a tpx3 turbo, a GPU backend should be built}
+%  % acceptance criteria
+%  {On compatible GPUs, performance increase by \(\ge x\%\) vs. CPU-only under the same conditions; outputs match CPU within tolerance. A realistic and precise value of \(x\) is currently unknown. }
+%  % test criteria
+%  [Test: run CPU vs. GPU on same dataset; measure latency reduction; ensure the same results are achieved.]
+
+    \end{requirements}
+
+    \subsubsection{Offline Image Reconstruction}
+    \begin{requirements}{OFR}
+
+        \item \must \req{Single CBED display}
+        % what will be done
+        {When a user selects a probe position, the system shall display the corresponding CBED diffraction pattern from disk.}
+%  % acceptance criteria
+%  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
+%  % test criteria
+%  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
+
+        \item \must \req{Average CBED (all)}
+        % what will be done
+        {The system shall compute and display the Average CBED over all probe positions in the scan.}
+%  % acceptance criteria
+%  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
+%  % test criteria
+%  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
+
+        \item \must \req{Offline vADF}
+        % what will be done
+        {The system shall recompute vADF from stored data by summing intensities within the selected detector region for each probe position. The selection ROI shall be annular.}
+%  % acceptance criteria
+%  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
+%  % test criteria
+%  [Test: simulate a simple known dataset and build a pixel for pixel image (256x256) of the detector using 1 for hit and 0 for not hit. Compare pixels that have intensities against those the test dataset.]
+
+        \item \must \req{iCOM}
+        % what will be done
+        {Provide offline iCOM reconstruction on supported datasets. Performance must be "reasonable" but not heavy duty, like the online algorithms}
+%  % acceptance criteria
+%  {Image is computed from offline data and displayed within a reasonable time (100ms max)}
+%  % test criteria
+%  [Test: run iCOM; verify axis metadata, units; compare against a validated reference implementation on a fixture.]
+
+        \item \should \req{iDPC}
+        % what will be done
+        {Provide offline iDPC reconstruction on supported datasets. Performance must be "reasonable" but not heavy duty, like the online algorithms}
+%  % acceptance criteria
+%  {Image is computed from offline data and displayed within a reasonable time (100ms max)}  % test criteria
+%  % test criteria
+%  [Test: run iDPC; verify axis metadata, units; compare against a validated reference implementation on a fixture.]
+
+        \item \must \req{Asynchronous execution + progress}
+        % what will be done
+        {Offline operations shall run asynchronously with progress reporting and possibility of user cancellation. Partial outputs are marked incomplete with a warning and message.}
+        % acceptance criteria
+%  {Long-running tasks ($>$500 ms) show progress; cancel stops computation leaves no corrupt outputs. Failure handled gracefully.}
+%  % test criteria
+%  [Test: start each algorithm; observe progress; cancel mid-run; assert timely stop and clean state.]
+
+        \item \could \req{Random-access readiness}
+        % what will be done
+        {If needed for performance, maintain an index that maps probe position to data blocks/offsets next to processed data output to facilitate fast lookup and retrieval of data for building images (such as CBED).}
+%  % acceptance criteria
+%  {Index builds after acquisition in the background and stored on disk for reuse. }
+%  % test criteria
+%  [Test: Index identifies correct hits and indexing occurs in 'reasonable` time. ]
+
+        \item \wont \req{Ptychography (offline)}
+        % what will be done
+        {Offline ptychography is out of scope.}
+%  % acceptance criteria
+%  {No UI/CLI entry points for ptychography exist.}
+
+
+        \item \wont \req{4D-STEM EELS (offline)}
+        % what will be done
+        {Offline 4D-STEM EELS is out of scope.}
+%  % acceptance criteria
+%  {No UI/CLI entry points for EELS exist.}
+
+    \end{requirements}
+
+    \subsubsection{Z-stacking Frames}
+    \begin{requirements}{ZST}
+
+        \item \should \req{Fixed-length Z stack}
+        % what will be done
+        {When the user sets \(Z>1\) and presses \emph{Start (Acquire)}, the system shall execute exactly \(Z\) full probe-grid scans. Every detector event shall be assigned to frame and probe position. }
+%  % acceptance criteria
+%  {Exactly \(Z\) completed frames are recorded; for each completed frame, all expected probe coordinates are present once.}
+%  % test criteria
+%  [Test: run \(Z=3\) on a test dataset; verify frame count, per-frame coordinate coverage, and sorter counters; assert zero mis-assign/unassigned.]
+
+        \item \should \req{Continuous Z mode}
+        % what will be done
+        {When Continuous Z mode is selected, the system shall repeat full probe-grid scans until the user issues \emph{Stop} or an automatic stop condition occurs (e.g., disk guard). Frames in continuous mode shall use a monotonically increasing \(\textit{frame\_id}\in\{0,1,2,\dots\}\).}
+%  % acceptance criteria
+%  {Acquisition runs until Stop or disk guard triggers; no partial frames are reported as complete; the final manifest lists all completed \(\textit{frame\_id}\) values consecutively without gaps.}
+%  % test criteria
+%  [Test: run 60 s continuous; issue Stop; validations]
+
+        \item \should \req{Frame output writing}
+        % what will be done
+        {Frame data shall be written to disk in the user-selected format(s).}
+%  % acceptance criteria
+%  {After power-loss or forced abort during a frame, partial frame data is "salvaged".}
+%  % test criteria
+%  [Test: fault-inject mid-frame (kill process) and verify.]
+
+    \end{requirements}
+
+    \subsubsection{Output and Raw Data Collection}
+    \begin{requirements}{OUT}
+
+        \item \could \req{Acquire preview policy}
+        % what will be done
+        {If necessary, and depending on the performance characteristics of the system (yet to be determined), the final acquisitions shall run with preview disabled by default. If explicitly enabled, the user shall be warned before they acquire that preview + acquisition on the same computer can lead to data loss.}
+        % acceptance criteria
+%  {Run (Acquire) with and without the preview pipeline. Measure performance metrics.}
+        % % test criteria
+        % [Test: Compare identical replays; compare counters; assert within tolerance.]
+
+        \item \must \req{Raw data immutability}
+        % what will be done
+        {Raw event data shall be written to disk exactly as received from Serval (ordering and content preserved), with no corrections applied in-line by the client or Serval.}
+        % acceptance criteria
+%  {Raw-file checksums match a capture of the a known dataset}
+
+        \item \must \req{Corrections policy}
+        % what will be done
+        {Corrections required for scientific correctness (e.g., tram-lane and PLL corrections) shall be applied only in reconstructions (online/offline), never to raw. Correction parameters are retrieved from Serval (or calibration files) and recorded in provenance.}
+%  % acceptance criteria
+%  {Raw remains unmodified; derived outputs include correction names, versions, and parameters; results match a reference .}
+%  % test criteria
+%  [Test: run offline vADF/iCOM with/without corrections; verify provenance; compare to reference.]
+
+        \item \wont \req{Timewalk correction in raw}
+        % what will be done
+        {Timewalk correction shall not be applied to raw event data. The time resolution is usually not small enough to have a huge impact.}
+%  % acceptance criteria
+%  {No timewalk steps present in raw pipeline; any timewalk handling appears only in derived workflows (if ever added).}
+%  % test criteria
+%  [Inspection.]
+
+        \item \must \req{Sparse event export (LiberTEM)}
+        % what will be done
+        {Provide a sparse event export compatible with LiberTEM (indices/values plus shape/coords).}
+%  % acceptance criteria
+%  {Exported dataset opens in LiberTEM and yields expected hit counts/statistics.}
+%  % test criteria
+%  [Test: manual load in LiberTEM; compare counters to manifest.]
+
+        \item \should \req{Zarr export}
+        % what will be done
+        {Provide a Zarr export for 4D data (e.g., \([H,W,Q_x,Q_y]\)) with chunking and compression per DATA-FMT; write online if feasible, else offline converter.}
+%  % acceptance criteria
+%  {Zarr opens in supported Python stacks (dask/xarray); shape/chunks/attrs match spec.}
+%  % test criteria
+%  [Test: open with xarray; check attrs; compare slices to reference.]
+
+        \item \should \req{HyperSpy HDF5 export}
+        % what will be done
+        {Provide HyperSpy-compatible HDF5 export for reconstructed data; write online if feasible, else via offline converter.}
+%  % acceptance criteria
+%  {File loads in HyperSpy; axis metadata/units correct.}
+%  % test criteria
+%  [Test: open in HyperSpy; verify axes/units; compare numerics.]
+
+        \item \must \req{Image export (2D)}
+        % what will be done
+        {Any 2D image produced (e.g., vADF, CBED, iCOM maps) shall be exportable to TIFF and PNG; 16-bit TIFF supported; metadata embedded where format allows.}
+%  % acceptance criteria
+%  {Exports succeed; TIFF bit depth correct; embedded tags include units and scaling; }
+%  % test criteria
+%  [Test: export samples; read back; verify tags/bit depth and pixel stats of known dataset. Visually look at the images..]
+
+        \item \could \req{ROI-based export}
+        % what will be done
+        {For data reduction, users may export subsets (ROIs in real space or diffraction space) to supported formats without duplicating full datasets.}
+%  % acceptance criteria
+%  {Exports contain only selected indices/pixels; metadata record the parent dataset and ROI definition.}
+%  % test criteria
+%  [Test: export ROI; verify indexing and metadata linkage.]
+
+        \item \could \req{Offline format converters}
+        % what will be done
+        {Provide CLI/GUI converters among supported formats}
+%  % acceptance criteria
+%  {Converters preserve values; progress + cancellation supported.}
+%  % test criteria
+%  [Test: round-trip conversions; compare checksums/tolerances; cancel mid-run.]
+
+        \item \must \req{Directory layout and naming}
+        % what will be done
+        {Acquisitions shall use a standardized directory layout and naming convention. Users can modify their pattern with a selection of template strings. Datetime, run ID, sample ID are examples.}
+%  % acceptance criteria
+%  {Created structure matches spec; names are unique and sortable.}
+%  % test criteria
+%  [Inspection/Test: create run; validate layout against schema.]
+
+        \item \could \req{Compression and chunking}
+        % what will be done
+        {For formats supporting it (Zarr/HDF5), chunking and compression shall be implemented for offline use.}
+%  % acceptance criteria
+%  {Resultant compressed data shall exist after }
+%  % test criteria
+%  [Test: round trip must work as expected]
+
+    \end{requirements}
+
+    \subsubsection{Pixel Masking}
+    \begin{requirements}{PMK}
+
+        \item \must \req{Software masking}
+        % what will be done
+        {The system shall support software inclusion zones or `mask' defined on the detector pixel grid (rectangular, circular, and annular at minimum). Software masks are applied in image reconstruction; raw data remain unchanged.}
+%  % acceptance criteria
+%  {Masks can be created/edited/removed when idle; during acquisition masks are immutable. Mask definitions (shape + parameters + schema version) are stored in measurement metadata and honored by online/offline reconstruction.}
+%  % test criteria
+%  [Test: define each shape; acquire; verify masked regions contribute zero; inspect metadata JSON for shapes/schema.]
+
+        \item \could \req{Hardware masking}
+        % what will be done
+        {The system shall support hardware masking by uploading a pixel configuration via Serval. }
+%  % acceptance criteria
+%  {After applying a hardware mask, hit counts from masked pixels drop to zero.}
+%  % test criteria
+%  [Test: apply/revert mask via API; compare pre/post hit maps; assert zero hits in masked region.]
+
+        \item \must \req{Mask mode selection}
+        % what will be done
+        {If both hardware and software masking are available, the UI shall allow selecting the active mode; switching is permitted only when idle.}
+%  % acceptance criteria
+%  {Exactly one mode is active; controls are disabled during acquisition; mode is recorded in metadata.}
+%  % test criteria
+%  [Test: toggle modes while idle vs. running; assert prevention whilst acquiring and metadata.]
+
+        \item \must \req{Mask visualization}
+        % what will be done
+        {Masks shall be visibly overlaid on the viewport; hardware and software masks use distinct visual styles.}
+%  % acceptance criteria
+%  {Overlay shows correct bounds; legend indicates active mode; visibility toggle works.}
+%  % test criteria
+%  [Inspection/Test: draw masks; verify overlay and legend.]
+
+        \item \must \req{Autoload masks}
+        % what will be done
+        {When loading an existing dataset/measurement, previously saved masks shall autoload and appear in the UI.}
+%  % acceptance criteria
+%  {Opening a dataset renders masks from metadata; reconstruction honors them.}
+%  % test criteria
+%  [Test: save with masks; reopen; verify overlay and effect.]
+
+    \end{requirements}
+
+    \subsubsection{Acquisition Modes}
+    \begin{requirements}{ACQ}
+
+        \item \must \req{Search mode}
+        % what will be done
+        {Search mode shall render real-time preview (vADF) and, by default, shall not persist raw events or reconstructions.}
+%  % acceptance criteria
+%  {In Search, no raw files are created.}
+%  % test criteria
+%  [Test: run Search; verify absence of files and presence of preview vADF.]
+
+        \item \must \req{Acquire mode}
+        % what will be done
+        {Acquire mode shall persist raw data data to disk in Sparse matrix format. Preview is disabled by default; if enabled, it must not interfere with data acquisition.}
+%  % acceptance criteria
+%  {Files are created; preflight disk guard enforced; preview (if enabled) meets works without hurting data integrity.}
+%  % test criteria
+%  [Test: run Acquire with/without preview.]
+
+        \item \must \req{Mode transitions}
+        % what will be done
+        {Mode selection shall be explicit and visible; mode changes are blocked while an acquisition is active.}
+%  % acceptance criteria
+%  {Attempting to change mode during an active run is prevented with a clear message.}
+%  % test criteria
+%  [Test: switch modes mid-run; assert block + message.]
+
+        \item \should \req{Parameter locking in Acquire}
+        % what will be done
+        {On \emph{Start (Acquire)}, scan parameters and masks are locked for the duration of the run.}
+%  % acceptance criteria
+%  {Controls affecting acquisition parameters become read-only; changes take effect only on the next run.}
+%  % test criteria
+%  [Test: attempt edits during Acquire; assert no effect.]
+
+    \end{requirements}
+
+    \subsubsection{Scan Generator}
+    \begin{requirements}{SCN}
+
+        \item \must \req{Backend selection}
+        % what will be done
+        {The system shall support selecting a scan-generator backend from a configured list; unavailable backends appear disabled.}
+%  % acceptance criteria
+%  {All backends work with their respective scan generators when connected}
+%  % test criteria
+%  [Test: scan integration test suite should pass with any backend. ]
+
+        \item \must \req{Start-time synchronization}
+        % what will be done
+        {Detector acquisition start and scan start shall be synchronized at the start-of-scan boundary. How do we measure this?}
+%  % acceptance criteria
+%  {On qualified hardware, measured start skew \(|\Delta t|\le 1\,\mu s\) over 100 trials; failures surface as warnings and block Acquire if policy requires.}
+%  % test criteria
+%  [Test: instrument start-of-scan and detector-gate signals; compute skew distribution; assert bound.]
+
+        \item \req{ROI/geometry translation}
+        % what will be done
+        {Scan generator shall accept ROI-derived geometries and produce matching probe grids for raster scan.}
+%  % acceptance criteria
+%  {Generated grids match requested \(H\times W\) (per rounding rules).}
+%  % test criteria
+%  [Test: send multiple ROIs; verify grid coverage.]
+
+        \item \must \req{Graceful stop}
+        % what will be done
+        {On \emph{Stop}, the scan generator shall honor the `stop now' and `stop at frame boundary' semantics from Z-stacking.}
+%  % acceptance criteria
+%  {Observed behavior matches selected stop mode.}
+%  % test criteria
+%  [Test: stop mid-frame with both options; verify manifests.]
+    \end{requirements}
+
+    \subsubsection{Observability and Pipeline Health}
+    \begin{requirements}{OBS}
+
+        \item \must \req{Metric definitions}
+        % what will be done
+        {Performance metrics (hit-rate, throughput in bits/s, ingest→present latency) shall be computed per Appendix }
+%  % acceptance criteria
+%  {Implementations use the formulas and windows; unit tests validate computations on fixtures.}
+%  % test criteria
+%  [Test: feed synthetic counters; verify computed metrics match reference.]
+
+        \item \must \req{Aggregation levels}
+        % what will be done
+        {Statistics shall be computed for the whole detector and per-chip.}
+%  % acceptance criteria
+%  {UI/API exposes both aggregation levels; chip IDs match detector layout.}
+%  % test criteria
+%  [Test: compare totals to sum of chips; assert equality.]
+
+        \item \must \req{Hit-rate UI cadence}
+        % what will be done
+        {While Running or Previewing, the UI shall update hit-rate at least once per second.}
+%  % acceptance criteria
+%  {Observed update interval \(\le 1.0\,\mathrm{s}\) over a 60-s run.}
+%  % test criteria
+%  [Test: capture UI updates; compute intervals.]
+
+        \item \should \req{Per-stage throughput (opt-in)}
+        % what will be done
+        {When observability is enabled, each pipeline stage shall report throughput in bytes/s and queue depths; this view is off by default.}
+%  % acceptance criteria
+%  {Opt-in UI shows per-stage throughput and queues; disabling hides it; enabling does not exceed overhead limits.}
+%  % test criteria
+%  [Test: toggle feature flag; verify metrics appear/disappear; check overhead.]
+
+        \item \must \req{Latency reporting}
+        % what will be done
+        {The system shall compute ingest→present latency (and ingest→disk latency for Acquire) and update a 1-s rolling mean every 0.5 s.}
+%  % acceptance criteria
+%  {Numbers match PERF-DEF computations; update cadence holds.}
+%  % test criteria
+%  [Test: replay fixture; verify rolling stats and cadence.]
+
+        \item \must \req{Observability overhead bound}
+        % what will be done
+        {With observability enabled, median ingest->present latency shall not degrade by more than \(+10\,\mathrm{ms}\) vs. baseline.}
+%  % acceptance criteria
+%  {A/B runs differ by \(\le 10\,\mathrm{ms}\) median; throughput unchanged within \(\pm 0.1\%\).}
+%  % test criteria
+%  [Test: A/B toggle; assert limits.]
+
+        \item \could \req{Scan–detector sync metric}
+        % what will be done
+        {Provide a sync metric estimating jitter between scan-box timing and detector hit timestamps, e.g., \(J=\mathrm{abs}(t_{\text{hit@40MHz}}-t_{\text{scan}})\), with histogram and summary stats.}
+%  % acceptance criteria
+%  {Metric and histogram available when hardware exposes both clocks; results recorded in telemetry.}
+%  % test criteria
+%  [Test: on capable hardware, compute \(J\); verify histogram export.]
+
+        \item \must \req{Dropped-data visibility}
+        % what will be done
+        {Dropped/lost/mis-mapped event counters shall be tracked per second and surfaced in UI and logs, with clear warnings when non-zero.}
+%  % acceptance criteria
+%  {Injected drops produce visible warnings and non-zero counters; counters reset per run and are written to manifest.}
+%  % test criteria
+%  [Test: inject drops; verify UI/log/manifest.]
+
+    \end{requirements}
+
+%
+%\subsubsection{Data Integrity at Extreme Rates}
+%\begin{requirements}{INT}
+%
+%\item \must \req{Mapping accuracy at max qualified rate}
+%  % what will be done
+%  {For hit-rate \(\le 320\,\mathrm{Mhits/s}\) and dwell \(\le 1\,\mu s\), the system shall assign \(\ge 99.999999\%\) of detector hits to the correct probe coordinate.}
+%  % acceptance criteria
+%  {On the INT-1 fixture (Appendix DATASETS), measured correct-assignments fraction \(\ge 0.99999999\).}
+%  % test criteria
+%  [Test: replay INT-1 with ground-truth mapping; compute fraction; assert bound.]
+%
+%\item \must \req{Loss/duplication bound}
+%  % what will be done
+%  {Under the same conditions, lost or duplicated hits shall be \(\le 0.001\%\) of total hits.}
+%  % acceptance criteria
+%  {Counters and reconciliation against ground-truth yield \(\le 1\times10^{-5}\) fraction lost+dup.}
+%  % test criteria
+%  [Test: reconcile emitted hits vs. truth; assert bound.]
+%
+%\item \must \req{Sorter persistence latency}
+%  % what will be done
+%  {The sorter shall persist each mapped hit within \(0.5\,\mu s\) (median) of the detector-provided timestamp, measured per Appendix PERF-TIMEBASE.}
+%  % acceptance criteria
+%  {Median persist delay \(\le 0.5\,\mu s\) on INT-1; P95 reported for visibility.}
+%  % test criteria
+%  [Test: align timebases; measure per-hit delay; assert median bound.]
+%
+%\item \must \req{Per-second telemetry}
+%  % what will be done
+%  {While acquiring, the system shall publish per-second counters of total hits, lost hits, mis-mapped hits, and median latency via the telemetry bus.}
+%  % acceptance criteria
+%  {Telemetry stream present at 1 Hz; fields populated; values match internal counters.}
+%  % test criteria
+%  [Test: subscribe; compare samples to internal metrics.]
+%
+%\end{requirements}
+
+    \subsubsection{UI Shell}
+
+    This section describes the UI counterpart of the feature only. Every UI component is backed by a non-UI component and its business logic is tested away from the UI in the form of unit/integration/end-to-end testing.
+
+    \begin{requirements}{UI}
+
+        \item \must \req{Standalone launch}
+        % what will be done
+        {The application shall launch as a standalone process when the user double-clicks the 4D-STEM UI icon or selects it from the native OS menu.}
+%  % acceptance
+%  {Main window becomes interactive; a single primary process is visible in the OS process list.}
+
+        \item \must \req{Restricted detector controls}
+        % what will be done
+        {The UI shall display only the detector controls listed in whitelist (still need to write the whitelist).}
+        % acceptance criteria
+        {Across all screens and states, only whitelisted controls appear; no navigation path exposes non-whitelisted controls.}
+
+        \item \must \req{Derived detector settings}
+        % what will be done
+        { Where possible, detector settings shall be derived automatically from scan parameters without additional user interaction. If the setting can be abstracted from the user, then it should be.}
+%  % acceptance criteria
+%  {Changing any covered scan parameter updates the mapped detector setting. The change is reflected in serval}
+
+        \item \must \req{Scan engine Configuration}
+        % what will be done
+        {The UI shall present a control window to configure the available scan engine. The scan engine must be supported by software.}
+%  % acceptance criteria
+%  {Control is visible without opening dialogs; selection persists to the active measurement context.}
+
+        \item \must \req{Scan geometry controls}
+        % what will be done
+        {The UI shall present controls for geometry including: scan height and width (in probe positions), prescan x/y, always visible.}
+%  % acceptance criteria
+%  {Editing values updates the pending scan geometry such that they take effect when a stem acquisition is run.}
+
+        \item \must \req{Dwell control}
+        % what will be done
+        {The UI shall present a dwell-time control, always visible.}
+%  % acceptance criteria
+%  {Value changes propagate to pending acquisition parameters and appear in the run summary / logs.}
+
+        \item \must \req{Z-frames control}
+        % what will be done
+        {The UI shall present a control for the number of frames \(Z\) (frame = one full scan of \(H\times W\)), always visible.}
+%  % acceptance criteria
+%  {\(Z\) appears in the run summary and is written to measurement metadata.}
+
+        \item \must \req{Start (Preview)}
+        % what will be done
+        {The UI shall provide a Start (Search/Preview) control.}
+%  % acceptance criteria
+%  {Activating enters Preview mode and renders live vADF; control indicates running state.}
+
+        \item \must \req{Start (Acquire)}
+        % what will be done
+        {The UI shall provide a Start (Acquire) control.}
+%  % acceptance criteria
+%  {Activating starts acquisition with current parameters and writes data to the selected output format(s).}
+
+        \item \must \req{Output Location}
+        % what will be done
+        {The UI presents a widget to collect output location. The widget accepts text input and selection from the native filesystem widget}
+%  % acceptance criteria
+%  {Acquisition puts the data and metadata into this location}
+
+        \item \must \req{Output format}
+        % what will be done
+        {A dropdown containing supported output formats is presented and always visible.}
+%  % acceptance criteria
+%  {Output format is a field in the metadata. After acquisition the data shall be in the requested location in the required format}
+
+        \item \must \req{Workspaces}
+        % what will be done
+        {Users shall be able to create/open a workspace; a workspace can contain multiple measurements.}
+%  % acceptance criteria
+%  {New/open actions work; workspace path is stored in recent list; multiple measurements list correctly.}
+
+        \item \must \req{Measurement metadata}
+        % what will be done
+        {Each measurement shall have metadata persisted as JSON (schema defined in Data Formats), accessible via the UI but hidden by default. All scan and detector parameters are included in the measurement metadata plus comments written by users themselves.}
+%  % acceptance criteria
+%  {'Show metadata` displays a measurement viewer, hidden by default; file exists on disk with schema version and passes schema validation.}
+
+        \item \must \req{Stop button}
+        % what will be done
+        {The UI shall provide a Stop control that is enabled only while Preview or Acquire is running.}
+%  % acceptance criteria
+%  {Disabled when idle; enabled within 200 ms of run start; returns UI to idle on activation.}
+
+        \item \must \req{Stop semantics}
+        % what will be done
+        {When the user presses \emph{Stop}, the system shall finish the current probe position and then stop. A preference 'Stop at frame boundary` shall, when enabled, finish the current frame before stopping.}
+%  % acceptance criteria
+%  {Default behavior ends within one probe after Stop; with the preference enabled, the run ends at the next frame boundary; manifests reflect a clean final frame state.}
+%  % test criteria
+%  [Test: trigger Stop mid-frame with option off/on; verify end position and manifest entries.]
+
+
+        \item \label{req:ui:roi} \must \req{ROIs}
+        % what will be done
+        {The user shall be able to create, update/move and remove rectangular, circular or annular ROIs by click-and-drag on the viewport.}
+%  % acceptance criteria
+%  {ROI appears with handles; coordinates shown in status.}
+
+        \item \must \req{ROI to scan geometry}
+        % what will be done
+        {The system shall translate a rectangular ROI into an equivalent scan geometry. ROIs snap to the pixel grid so values derived are integers.}
+%  % acceptance criteria
+%  {Computed \(H\) and \(W\) equal ROI extents; pending scan parameters update accordingly.}
+
+        \item \must \req{ROI for diffraction views}
+        % what will be done
+        {The system shall allow using ROI selections to build diffraction images (e.g. averaged CBED of the selection).}
+%  % acceptance criteria
+%  {Selecting a rectangular ROI automatically computed the average CBED}
+
+        \item \could \req{ROI expanded view}
+        % what will be done
+        {A ROI shall be expandable via invoking the 'right click > Expand ROI` function. The system produces a full size, zoomed in image from the selection and optionally enables updating the scan geometry to reflect the new sub-region}
+%  % acceptance criteria
+%  {Right-click > Expand ROI opens the new view of the current image. The new view has the correct bounds and scan is updated.}
+
+        \item \could \req{Dockable controls}
+        % what will be done
+        {Control panels shall be dockable/undockable and toggleable via the View menu. A default layout is exposed for return to factory settings. }
+%  % acceptance criteria
+%  {Panels can be moved, floated, and toggled.}
+
+        \item \must \req{Persistence}
+        % what will be done
+        {UI settings (layout, last workspace, panel visibility, scan control values) shall persist across sessions and at the granularity of a workspace. Detector specific controls persist per workstation, rather than per workspace.}
+%  % acceptance criteria
+%  {Close/reopen restores prior state on the same machine/user.}
+
+        \item \must \req{Connectivity loss handling}
+        % what will be done
+        {On loss of connectivity to Serval, scan engine, or detector, the UI shall display status and attempt reconnect every 1 s until success.}
+%  % acceptance criteria
+%  {Observed retry interval for at least 10 min; status banner visible.}
+
+        \item \must \req{Startup without connectivity}
+        % what will be done
+        {If no connectivity is available at startup, the UI shall present a non-blocking status and allow offline configuration. Any setting or control relating to the unconnected device or server shall be blocked when not connected.}
+%  % acceptance criteria
+%  {Main window is usable; status banner visible; configuration pages accessible. Scan controls disabled when no scan generator available. Controls that drive Serval are disabled when serval is not available.}
+
+        \item \must \req{Logging}
+        % what will be done
+        {The UI shall write a log of important events to disk and to console; log level is controlled by environment variable \texttt{LOG\_LEVEL}. Log location is user-configurable under \texttt{File > Preferences} but defaults to within the workspace configuration.}
+%  % acceptance criteria
+%  {Different \texttt{LOG\_LEVEL} values change verbosity; files created at default paths; preference overrides path; Serval redirection present.}
+
+        \item \must \req{Disk space guard (preflight + warning)}
+        % what will be done
+        {On \emph{Start (Acquire)}, the system shall evaluate free space on the selected target volume. If free space is at or below the near-full threshold (default 5\% of the volume), the system shall present a low-space warning before starting. If the volume reports 0 writable bytes free, the acquisition shall not start.}
+%  % acceptance criteria
+%  {On pressing \emph{Start (Acquire)}: (a) if free space > threshold, acquisition begins; (b) if free space \(\le\) threshold, a low-space warning is shown and the user may proceed; (c) if free space \(=0\), acquisition is blocked and an error is shown. All cases are recorded in the log.}
+
+        \item \must \req{Detector info and health available}
+        % what will be done
+        {UI shall display from view > detector health a UI panel describing the detectors information from serval}
+%  % Acceptance criteria
+%    {The UI displays accurate information}
+
+    \end{requirements}
+
+    \subsection{Non-Functional Requirements}
+
+    \textbf{Data Integrity}: Data measured using our device is sacred. We should do our utmost to ensure we collect all data requested by the user as accurately as possible. By default, the data shall not be modified in any way storage. This philosophy is shared with serval; output should be exactly as recorded, regardless of known problems in the hardware that need correction, including the tramlane effect and the VCC correction. Nevertheless, it is convenient for users to have these things automatically corrected so that they do not need to do it themselves. We can support an opt-in switch that toggles corrections in the raw data.
+
+    \textbf{Performance}: There are some performance-critical operations proposed in this software. Namely, the live processing needs to be able to keep up with the data acquisition and for adequate user feedback for the microscopist we need to minimize latency. Offline processing does not need the same performance requirement
+    and just needs to run `as fast as reasonable'.
+
+    \textbf{Scalability}: In the context of processing data from timepix detectors, scalability means the ability to handle more data at once. The processing requirements scale with the detector type and layout. The tpx3 single chip can read out at a rate of 40Mbits/s while the `turbo' edition can operate at 80Mbits/s. There are single, quad and 2x4 variations in the layout of detectors. Performance requirements scale linearly with the addition of every chip. So respectively, the 1, 4, and 8 chip detectors can read out a maximum of 80, 320 and 640Mbits/s and half this for the non-turbo versions. A single tpx4 device can read out a maximum of 160Gbits/s, which presents a challenge on an entirely new scale for data processing. Yet despite the engineering challenges, it is imperative that we build for the future generation of timepix as well as focusing on the now.
+
+
+    %Performance, Scalability, Extensibility, Maintainability, Portability, Usability, Testability, Modularity, Usability, Reliability
+
+    \subsection{Legal and Regulatory Requirements}
+    Licenses. What can we do? What can't we do?
+
+%    \section{Appendices}
+%
+%    \subsection{Glossary}
+%
+%    \subsection{Use Cases and Diagrams}
 
 
 \end{document}
-
 
 
 % Talk with Fran
