@@ -64,10 +64,17 @@
 \showverificationfalse % flip to \showverificationtrue to show Verification lines
 
 \newcommand{\reqnum}{%
-    \ifnum\value{reqno}<10 0%
-    \else\ifnum\value{reqno}<1 00%
-    \else\ifnum\value{reqno}<10 0%
-        \fi\fi\fi
+    \ifnum
+        \value{reqno}<10 0%
+    \else
+        \ifnum
+            \value{reqno}<1 00%
+        \else
+            \ifnum
+                \value{reqno}<10 0%
+            \fi
+        \fi
+    \fi
     \arabic{reqno}%
 }
 \newenvironment{requirements}[1]{%
@@ -131,8 +138,13 @@
 
 
     \section{Introduction}\label{sec:intro}
-% Purpose - who is the product for?
-    This document defines the implementation-independent software requirements for 4D-STEM users. It is a proposal for how to move forward in the 4D-stem project, whilst implying a direction for other applications specific software which could sit along side the output of this effort. This document is a reference for software and application engineers and a description of what is being developed for the sales team. We should consider this document `living' in that we do not expect to capture everything now and this information will be updated with pertinent information as the project evolves.
+    This document is a proposal for how to move forward in software for 4D-stem at ASI. Its intention is to be implementation agnostic although we already have an idea on how this might look and a few high level implementation details have crept in. Should we choose to implement the tools and features outlined in this document, then this document would serve as a reference for software developers to know \textit{what} to build, a reference for application engineers to know \textit{what} to test and a reference for sales force to know \textit{what} to promise prospective clients. It should also describe to everybody \textit{why} we are building the software in the first place.
+
+    Although we have tried to be comprehensive, we do not expect to capture everything that a 4D-stem software package needs up front. Instead, this document will be updated with relevant details when it is appropriate to do so.
+
+    If accepted, this proposal will be split into small managable chunks of work that do not exceed 4 weeks of development at a time. Features will be tested in-house and given to customers for testing and feedback. This is not a waterfall project where in a years time we give a customer some software that they do not like or doesn't fit their needs.
+
+    \subsection{Background}
 
     4D-STEM (Four Dimensional Scanning Transmission Electron Microscopy) is a microscopy technique where a focused electron beam is scanned across a sample, producing a 2D diffraction pattern at each position. The resulting four-dimensional dataset, with two spatial and two reciprocal-space coordinates, enables detailed analysis of structure, strain, and other material properties.
 
@@ -143,69 +155,29 @@
     From the outset, the design will incorporate support for the next generation of Timepix (Timepix4). While full-rate Timepix4 support may not be available immediately, the system will be developed with modularity in mind. This will allow us to integrate higher-performance components in the future, such as GPU-accelerated modules.
 
     \subsection{Positioning in terms of existing software}
+    At a super high level, our software system needs to control Tpx3, Mpx3 and Tpx4 detectors and receive data produced by them for further analysis. We also need to assist in determining whether a region of sample is interesting enough for further analysis. This already necessitates several diverse features ranging from low level detector control to a live preview of the detector image. In the more distant past, Sophie and Dexter were our main software offerings. These were "monolithic" (single deployable unit) applcations that took on all responsibilities needed for all the requirements. Whilst the exact reasons for the deprecation of these tools were not recorded in any detail, they had significant enough drawbacks to warrent a redesign of the architecture into a distributed system (multiple deployable units), which are now known as Serval and Accos. To pre-load the discussion below, the proposal in this document is to split Serval functionality further into another distributed unit to handle 4D-stem data processing and to replace the presentation layer with another unit specific to 4D-STEM.
 
-    To date, ASI has focused their efforts on building this feature into Accos and Serval. From a high level perspective, the core architectural ideas behind serval and accos are sound. This document does not propose changes to these ideas but rather adds to them. To explain this, we give a brief overview of serval and accos.
+    To elaborate, when Serval/Accos were designed the focus was on core detector control and acquisition. We did not consider application specific/focused areas. Since then, our organisation has moved to what we are calling "application focused" teams, whereby 4D-STEM is one of our application focused areas. The proposal here is to have our software directly miorror the organisation of our company by making the architecture and product reflect the team boundaries as well as how we present products in marketing. A dedicated 4D-STEM application aligns with our 4D-STEM team and clarifies our market positioning as a 4D-STEM solutions company.
 
-    Our detector acquisition software needs to interact with and control detectors (Tpx3, Mpx3 and Tpx4) and receive data from those devices for further analysis. While there are options/controls which change aspects of acquisition, this statement describes the core functionality of our software needs. In the past Sophie and Dexter were "monolithic" applcations (aka one stand-alone unit that is distributed to clients) that took on all software requirements per device (except for the newer tpx4). However, Sophie and Dexter had significant drawbacks, including memory bugs (because it was C++). The present authors were not working for ASI when these decisions were made, but the problems were significant enough to warrent a redesign of our software architecture.
+    To date, 4D-STEM pipelines prototyped inside Serval are unfinished and have performance, testing, and stability issues. We could finish them in Serval (pros: reuse and a simpler "one Serval" to rule them all), but the cons are significant: 4D-STEM changes interfere with core acquisition, shared releases slow delivery, and the 4D-STEM product is obscured under Serval/Accos.
 
-    The biggest architectural change between the Sophie and Dexter era to the Serval and Accos era is a move from a monolithic to distributed (multiple deployment units) architecture. Serval is a backend detector control unit as well a data processing unit. Accos is the presentation layer, i.e. user input/control/viewing layer. Importantly, serval is controlled by http and runs independently of accos; external users can write their own software around serval.
+    Since the development of Serval and Accos, we have invested time in a software package called "Luna" dedicated to the processing of Timepix3 and Timepix4 data. Luna is written in rust which is renowned both for its picky compiler and memory safety without garbage collection; making it an excellant choice when the need is high performance online data processing.
 
-    Importantly when the original system was designed the focus was on core detector control and acquisition. That is, physically being able to configure a detector to use its many features in experiments. It is left to the user to work out how to configure the software for their specific experiments. Since then, our organisation has moved to what we are calling "application focused" teams, and the 4D-STEM team is one of our application focused areas.
+    In the following sections, we describe the system we intend to build from a high-level perspective. We describe the environment the system needs to run, including software and hardware dependencies, and we outline the needs of the end user that this software aims to solve. We outline functional requirements and the capabilities needed for the software to succeed.
 
-    We (I) argue here that while our organisation moved on the architecture of the software did not follow. To date, 4d-STEM processing pipelines have been prototyped in Serval. Currently this is in an unfinished state with performance difficulties, lack of testing and stability. One possible move forward is to fix the serval pipelines and embrace the 4D-Stem application as a fully supported feature in Serval. While there are clear benefits of this move, such as: reuse of existing code and its a simpler "product space" for customers to understand (since one serval does everything) there are also disadvantages, such as: 4D-stem development often gets in the way of and breaks core acquisition functionality; no separate release cycles which leads to longer, larger releases; and hides the business intention of ASI as a 4D-STEM solutions company under the serval umbrella. If we market ourselves as a 4D-STEM solutions company then a dedicated 4D-stem software application is obviously a sound choice to support this business need.
-
-    Since the development of Serval and Accos, we have invested time in a software package called "Luna" dedicated to the processing of Timepix3 and Timepix4 data. This is a general data processing pipeline for data from these devices. It performs the same function as Serval's data processing pipelines. The package is written in rust which is renowned both for its picky compiler and memory safety without garbage collection, making it an excellant choice when the need is high performance online data processing.
-
-    The high level proposal that we make in this document is to build on our existing distributed architecture with a new component writen in the Luna ecosystem and dedicated to 4D-STEM. In this way we separate release cycles and physically prevent 4D-stem functionality from breaking existing pipelines. We can optimize specifically for 4D-stem (for instance in with sorting) without complicating an already complicated serval. We can then remove the 4D-STEM specific features from Accos, which currently has serious workflow issues for the 4D-stem user which make it difficult and non-intuitive to use. Indeed, this approach has the potential to become exemplary to other specific applications that we can build for.
-
-    In the following sections, we describe the system we intend to build from a high-level perspective. We describe the environment the system needs to run, including software and hardware dependencies, and we outline the needs of the end user that this software aims to solve. We outline functional requirements and the architectural characteristics that developers need to design for based on these needs.
 
     \section{Overall Description}\label{sec:overall_description}
 % Purpose: Provide a high-level view of the product and boundaries before detailed requirements.
 % Guidance: Keep technology-agnostic and avoid "shall" statements in this section.
 % project scope - overview of the product in relation to business goals. What are the expected outcomes?
-    The primary purpose of this software is to provide users with a fully integrated workstation for controlling their detector and scan generators. It must function as a cohesive platform that allows scientists to conduct 4D-stem experiments easily. The scope of the proposal is limited to the acquisition of 4D-Stem data for further analysis and the necessary processing required to help users determine in real time whether a region of sample is of interest.
+    The purpose of this software is to provide a fully integrated workstation for controlling detectors and scan generators so scientists can run 4D-STEM acquisitions easily. The scope is limited to acquisition and the minimal real-time and offline processing required to decide whether a sample region merits further analysis.
 
-    To achieve this, the software must deliver ergonomic workflows that support both data acquisition and sample evaluation. A high-performance live image stream is essential, giving microscopists sufficient real-time feedback to assess sample regions effectively. Since we do not aim to solve "further analysis" problems with this software, we need strong interoperability with existing software packages such as LiberTEM, HyperSpy, and py4DSTEM.
+    A high-performance live image stream is essential to give microscopists timely feedback while navigating regions of interest. Because "further analysis" is explicitly out of scope, we need clear handoff boundaries where users can move to other software. That is, in order to integrate ourselves into the 4D-Stem software ecosystem, we need to properly interoperate with downstream analysis tools, including LiberTEM, py4DStem and HyperSpy.
 
     \subsection{User Classes and Characteristics}\label{subsec:user-classes-and-characteristics}
 % Purpose: Describe user groups and relevant characteristics that affect design and UX.
 % Guidance: Do not list needs here; needs belong in Section 2.6.
     The primary users are 4D-STEM scientists, who also operate the microscope. Users range from computationally literate power users to those without much experience. Both users are mainly focused on scientific outcome rather than on the processing required to get them there. The software abstracts data acquisition and visualisation details so that no programming skills are required for them to do just that.
-
-    \subsection{Definitions and Acronyms}
-% Clearly define all key terms, acronyms, and abbreviations used in the SRS. This will help eliminate any ambiguity and ensure that all parties easily understand the document.
-    \begin{enumerate}
-        \textbf{        \item CBED: Convergent Beam Electron Diffraction}
-        \begin{enumerate}
-            \item A convergent (focused or defocused) electron probe produces a diffraction disk in the reciprocal plane, where the detector is positioned. This forms the basis of Convergent Beam Electron Diffraction (CBED), in which the disk size in reciprocal space is inversely related to the probe size in real space.
-        \end{enumerate}
-        \textbf{        \item vADF: virtual Annular Dark Field}
-        \begin{enumerate}
-            \item The user defines a ring in the detector’s dark-field region (beyond the probe’s convergence angle), which serves as a discriminator for dark-field contrast. This contrast is roughly proportional to the atomic number (Z) of the material and the proximity of the electron probe to the atom. As a rule of thumb, heavier atoms scatter electrons to larger angles, so positioning the ring further from the optical axis enhances their contrast.
-        \end{enumerate}
-        \textbf{        \item iDPC: integrated Differential Phase Contrast}
-        \begin{enumerate}
-            \item Contrast is generated by integrating the differential phase signal across segmented regions of the detector. Instead of relying on high-angle scattering, iDPC is sensitive to the phase shifts induced by variations in the electrostatic potential of the sample. This makes the technique particularly well-suited for visualizing light elements and weakly scattering materials. The rule of thumb is that iDPC provides nearly linear contrast with respect to the projected potential, enabling both heavy and light atoms to be visualized simultaneously with high fidelity.
-        \end{enumerate}
-        \textbf{        \item iCOM: integrated Center Of Mass}
-        \begin{enumerate}
-            \item In iCOM imaging, contrast is generated by computing the center-of-mass of the transmitted electron intensity across the detector. This approach directly maps the local momentum transfer from the electron beam to the sample, providing sensitivity to both electric and magnetic fields as well as structural variations. Unlike high-angle scattering techniques, iCOM captures subtle deflections of the probe, making it particularly effective for visualizing light elements and weak phase objects. The rule of thumb is that the magnitude and direction of the center-of-mass shift correspond to the strength and orientation of the local projected fields, enabling quantitative interpretation of sample properties.
-        \end{enumerate}
-
-        %\item Diffraction bands: the amount of diffraction an electron experiences is related to the charge of the atoms inherent in the sample (please validate this statement). A typical sample therefore has characteristic diffraction patterns which can be selected using an annulus shape.
-        \textbf{         \item Diffraction:}
-        \begin{enumerate}
-            \item The concept of diffraction must be understood in relation to both the sample statistics and the characteristics of the electron beam interacting with the sample:
-            \begin{enumerate}
-                \item \textbf{Parallel (collimated electron beam):} When using a large parallel beam that illuminates many unit cells of a crystalline material, sharp diffraction spots appear, corresponding to the Bragg reflections of the unit cell. In the case of a polycrystalline material, these spots are replaced by diffraction rings, as multiple grain orientations contribute to the same reflection.
-                \item \textbf{Convergent beam (CBED):} As the beam is focused to cover fewer unit cells (a smaller "kernel" in real space), diffraction spots broaden into disks.
-
-
-            \end{enumerate}
-            \item From a quantum mechanical perspective, this can be linked to Heisenberg’s uncertainty principle: greater certainty in position (real space, where the localized probe interacts with the sample) leads to reduced certainty in momentum (reciprocal space), blurring the Bragg reflections due to limited sampling statistics.  And the opposite is true for the case of Parallel illumination
-        \end{enumerate}
-    \end{enumerate}
 
     \subsection{Operating Environment}\label{subsec:operating-environment}
 % Purpose: Define hardware, OS, network, and site constraints that impact design and testing.
@@ -242,6 +214,39 @@
         \textit{Rationale}: Scan controls are some of the most important in 4D-STEM, they should be prevalent and obvious in the user workflow for better user experience, operating on the principle of least clicks to control your scan.
     \end{enumerate}
 
+    \subsection{Definitions and Acronyms}
+% Clearly define all key terms, acronyms, and abbreviations used in the SRS. This will help eliminate any ambiguity and ensure that all parties easily understand the document.
+    \begin{enumerate}
+        \textbf{        \item CBED: Convergent Beam Electron Diffraction}
+        \begin{enumerate}
+            \item A convergent (focused or defocused) electron probe produces a diffraction disk in the reciprocal plane, where the detector is positioned. This forms the basis of Convergent Beam Electron Diffraction (CBED), in which the disk size in reciprocal space is inversely related to the probe size in real space.
+        \end{enumerate}
+        \textbf{        \item vADF: virtual Annular Dark Field}
+        \begin{enumerate}
+            \item The user defines a ring in the detector’s dark-field region (beyond the probe’s convergence angle), which serves as a discriminator for dark-field contrast. This contrast is roughly proportional to the atomic number (Z) of the material and the proximity of the electron probe to the atom. As a rule of thumb, heavier atoms scatter electrons to larger angles, so positioning the ring further from the optical axis enhances their contrast.
+        \end{enumerate}
+        \textbf{        \item iDPC: integrated Differential Phase Contrast}
+        \begin{enumerate}
+            \item Contrast is generated by integrating the differential phase signal across segmented regions of the detector. Instead of relying on high-angle scattering, iDPC is sensitive to the phase shifts induced by variations in the electrostatic potential of the sample. This makes the technique particularly well-suited for visualizing light elements and weakly scattering materials. The rule of thumb is that iDPC provides nearly linear contrast with respect to the projected potential, enabling both heavy and light atoms to be visualized simultaneously with high fidelity.
+        \end{enumerate}
+        \textbf{        \item iCOM: integrated Center Of Mass}
+        \begin{enumerate}
+            \item In iCOM imaging, contrast is generated by computing the center-of-mass of the transmitted electron intensity across the detector. This approach directly maps the local momentum transfer from the electron beam to the sample, providing sensitivity to both electric and magnetic fields as well as structural variations. Unlike high-angle scattering techniques, iCOM captures subtle deflections of the probe, making it particularly effective for visualizing light elements and weak phase objects. The rule of thumb is that the magnitude and direction of the center-of-mass shift correspond to the strength and orientation of the local projected fields, enabling quantitative interpretation of sample properties.
+        \end{enumerate}
+
+        %\item Diffraction bands: the amount of diffraction an electron experiences is related to the charge of the atoms inherent in the sample (please validate this statement). A typical sample therefore has characteristic diffraction patterns which can be selected using an annulus shape.
+        \textbf{         \item Diffraction:}
+        \begin{enumerate}
+            \item The concept of diffraction must be understood in relation to both the sample statistics and the characteristics of the electron beam interacting with the sample:
+            \begin{enumerate}
+                \item \textbf{Parallel (collimated electron beam):} When using a large parallel beam that illuminates many unit cells of a crystalline material, sharp diffraction spots appear, corresponding to the Bragg reflections of the unit cell. In the case of a polycrystalline material, these spots are replaced by diffraction rings, as multiple grain orientations contribute to the same reflection.
+                \item \textbf{Convergent beam (CBED):} As the beam is focused to cover fewer unit cells (a smaller "kernel" in real space), diffraction spots broaden into disks.
+
+
+            \end{enumerate}
+            \item From a quantum mechanical perspective, this can be linked to Heisenberg’s uncertainty principle: greater certainty in position (real space, where the localized probe interacts with the sample) leads to reduced certainty in momentum (reciprocal space), blurring the Bragg reflections due to limited sampling statistics. And the opposite is true for the case of Parallel illumination
+        \end{enumerate}
+    \end{enumerate}
 
     \section{System Features and Requirements}
 % What is the system supposed to do? What tasks should it perform? Start with "user need' decompose into atomic functional requirements. Each requirement should be testable.
@@ -251,116 +256,21 @@
 
     \subsection{Functional Requirements}
 
-    \subsubsection{Serval Integration}
-    Serval is the control interface between the application and the detector.
-
-    \begin{requirements}{SRV}
-
-        \item \must \req{Connect or spawn Serval}
-        % What should happen
-        {On startup, the system shall either (a) connect to a reachable Serval instance at the configured host:port, or (b) spawn Serval as a child process whose lifetime is tied to the 4D-STEM UI.}
-        % acceptance criteria
-%  {Attach succeeds or a child process is started; ownership is recorded in metadata. If attached, the UI does not terminate Serval on exit; if spawned, the UI terminates it cleanly on exit.}
-%  % test
-%  [Start with/without reachable Serval. Check attach vs spawn, and exit behavior. Fixture: A mini server that looks like Serval for the parts that matter (dashboard + status).]
-
-        \item \must \req{Version negotiation}
-        % What should happen
-        {On initial connect, the system shall retrieve Serval's API version and compare it to the supported range. If out of range, the UI shall warn the user.}
-%  % acceptance criteria
-%  {Version captured in logs/metadata; \could correct warning/blocking per compatibility matrix.}
-%  % test criteria
-%  [Test: emulate 'too old/too new/incompatible` versions; assert warning banner and \could blocked actions.]
-
-        \item \must \req{State subscription (push)}
-        % What should happen
-        {The client shall subscribe to Serval state changes (e.g., detector \{Disconnected, Connected, Idle, Running\}). \wont The system shall not use periodic polling to keep up to date with serval connectivity status.}
-%  % acceptance criteria
-%  {State transitions correctly arrive}
-%  % test criteria
-%  [Test: push state changes from stub/mock serval; capture timing]
-        \item \must \req{Detector connection sequence}
-        % What should happen
-        {Upon receiving \emph{detector\_connected} signal, the system shall: (1) upload DACs, (2) upload pixel configuration (BPC), (3) set data destination, (4) load saved detector settings (e.g. bias) for this detector chipboard Id. Failures stop the sequence and surface a recoverable error with instructions on how to resolve the issue.}
-%  % acceptance criteria
-%  {All four steps succeed, or the sequence aborts with a clear message; successful steps are idempotent (has no effect) on retry.}
-%  % test criteria
-%  [Test: inject failure at each step; assert stop + message; rerun to confirm idempotency of prior steps.]
-
-        \item \must \req{Serval Command error model}
-        % What should happen
-        {All Serval command failures shall be presented to the user as human readable message and remediation hint.}
-%  % acceptance criteria
-%  {Errors in logs and UI contain structured fields; API errors use the documented schema.}
-%  % test criteria
-%  [Inspection/Test: trigger known errors; assert schema fields present and logged.]
-
-        \item \must \req{Connectivity loss during acquisition}
-        % What should happen
-        {If the control connection to Serval drops during an active acquisition the acqiusition is considered invalid. The system shall detect connection loss and abort the acquisition gracefully.}
-%  % acceptance criteria
-%  {Loss detected; after recovery, state is consistent the error is recorded in logs and the user is notified}
-%  % test criteria
-%  [Manual test: remove the ethernet cable mid run; verify abort gracefully path. Validate logs.]
-
-        \item \must \req{Logging and correlation}
-        % What should happen
-        {Every Serval command, response, state change, and error shall be logged in the serval http log stored per workspace}
-%  % acceptance criteria
-%  {Logs contain request/response pairs}
-%  % test criteria
-%  [Send a command; locate the log and validate]
-
-        \item \must \req{Transport keepalives}
-        % What should happen
-        {The client shall use protocol keepalives to detect dead connections without polling for state.}
-%  % acceptance criteria
-%  {Dead connections are detected within the configured interval; reconnect attempts follow.}
-%  % test criteria
-%  [Test: drop TCP silently; observe keepalive detection timeline and retry behavior.]
-
-        \item \must \req{Endpoint configuration}
-        % What should happen
-        {Serval host, port, and transport addresses shall be configurable in the UI; changes take effect on "accept" button press.}
-%  % acceptance criteria
-%  {Editing config changes the target; connections establish to the new endpoint after reconnect.}
-%  % test criteria
-%  [Test: change the end point to another socket running a different serval instance. Verify connectivity.]
-
-        \item \wont \req{Equalization in client}
-        % What should happen
-        {The client shall not perform detector equalization; that function remains in Accos.}
-        % acceptance criteria
-%  {No equalization commands exist; UI offers no equalization controls.}
-
-        \item \wont \req{Detector orientation in client}
-        % What should happen
-        {The client shall not manage detector orientation.}
-%  % acceptance criteria
-%  {No orientation commands exist; UI offers no orientation controls.}
-%  % test criteria
-%  [Inspection.]
-
-    \end{requirements}
-
     \subsubsection{Online Image Reconstruction}
     \begin{requirements}{OIR}
-
         \item \must \req{Real-time vADF reconstruction}
 %        This includes offline in-app display of different ADF next to each other, that should be relatively simple given that we have the CBED from each probe position)
-        {Raw event data received from Serval via TCP shall be processed in real time into images using the vADF algorithm. Processing is performed by \emph{luna-stem}/\emph{luna-core} and displayed in the 4D-STEM UI. For selection of pixels that contribute to final vADF image, an annular ROI shall be used (\cref{req:ui:roi})}.
-
-            {Acceptance Criteria: For dwell times \(\ge 100\ \ns\) at 320MHz per second the image shall display cleanly and without lagging or losing data.}
-
-            {Test: replay a recorded \(512\times512\), \(100\,\n s\) dwell event stream and measure performance]}
-
+        {Raw event data received from Serval via TCP shall be processed in real time into images using the vADF algorithm. Processing is performed by \emph{luna-stem}/\emph{luna-core} and displayed in the 4D-STEM UI. For selection of pixels that contribute to final vADF image, an annular ROI shall be used (\cref{req:ui:roi}).}
+%        {Acceptance Criteria: For dwell times \(\ge 100\ \ns\) at 320MHz per second the image shall display cleanly and without lagging or losing data.}
+%
+%            {Test: replay a recorded \(512\times512\), \(100\,\n s\) dwell event stream and measure performance]}
         \item \must \req{Preview non-interference}
         % what will be done
         {Preview must not reduce performance to such a point that data integrity is compromised. }
 
-        \item \should \req{GPU-accelerated vADF}
+        \item \could \req{GPU-accelerated vADF}
         % what will be done
-        {Provide a GPU-accelerated implementation of vADF on supported hardware. Especially when targeting tpx4 (in future) which has x5 the performance requirements of a tpx3 turbo, a GPU backend should be built}
+        {Provide a GPU-accelerated implementation of vADF on supported hardware. Especially when targeting tpx4 (in future) which has x5 the performance requirements of a tpx3 turbo, a GPU backend should be built.}
 
     \end{requirements}
 
@@ -389,7 +299,7 @@
 
         \item \could \req{Random-access readiness}
         % what will be done
-        {If needed for performance, maintain an index that maps probe position to data blocks/offsets next to processed data output to facilitate fast lookup and retrieval of data for building images (such as CBED).}
+        {If needed for performance, maintain an index that maps probe position to data blocks/offsets next to processed data output to facilitate fast lookup and retrieval of data for building images (such as recomputing CBED).}
 
         \item \wont \req{Ptychography (offline)}
         % what will be done
@@ -398,6 +308,67 @@
         \item \wont \req{4D-STEM EELS (offline)}
         % what will be done
         {Offline 4D-STEM EELS is out of scope.}
+
+    \end{requirements}
+
+    \subsubsection{Serval Integration}
+
+    \begin{requirements}{SRV}
+
+        \item \must \req{Connect or spawn Serval}
+        % What should happen
+        {On startup, the system shall either (a) connect to a reachable Serval instance at the configured host:port, or (b) spawn Serval as a child process whose lifetime is tied to the 4D-STEM UI.}
+        % acceptance criteria
+%  {Attach succeeds or a child process is started; ownership is recorded in metadata. If attached, the UI does not terminate Serval on exit; if spawned, the UI terminates it cleanly on exit.}
+%  % test
+%  [Start with/without reachable Serval. Check attach vs spawn, and exit behavior. Fixture: A mini server that looks like Serval for the parts that matter (dashboard + status).]
+
+        \item \must \req{Version negotiation}
+        % What should happen
+        {On initial connect, the system shall retrieve Serval's API version and compare it to the supported range. If out of range, the UI shall warn the user.}
+%  % acceptance criteria
+%  {Version captured in logs/metadata; \could correct warning/blocking per compatibility matrix.}
+%  % test criteria
+%  [Test: emulate 'too old/too new/incompatible` versions; assert warning banner and \could blocked actions.]
+
+        \item \must \req{State subscription (push)}
+        % What should happen
+        {The client shall subscribe to Serval state changes (e.g., detector \{Disconnected, Connected, Idle, Running\}). \wont The system shall not use periodic polling to keep up to date with serval connectivity status.}
+%  % acceptance criteria
+%  {State transitions correctly arrive}
+%  % test criteria
+%  [Test: push state changes from stub/mock serval; capture timing]
+        \item \must \req{Detector connection sequence}
+        % What should happen
+        {Upon receiving \emph{detector\_connected} signal, the system shall: (1) upload DACs, (2) upload pixel configuration (BPC), (3) set data destination, (4) load saved detector settings (e.g. bias) for this detector chipboard Id. Failures stop the sequence and surface a recoverable error with instructions on how to resolve the issue. Dacs and BPC are produced by equalisation in Accos and provided when a user purchases a system from us.}
+
+        \item \must \req{Serval Command error model}
+        % What should happen
+        {All Serval command failures shall be presented to the user as human readable message and hint on how to resolve the error.}
+
+        \item \must \req{Connectivity loss during acquisition}
+        % What should happen
+        {If the control connection to Serval drops during an active acquisition the acqiusition is considered invalid. The system shall detect connection loss and abort the acquisition gracefully.}
+
+        \item \must \req{Logging and correlation}
+        % What should happen
+        {Every Serval command, response, state change, and error shall be logged in a serval http log stored per workspace}
+
+        \item \must \req{Transport keepalives}
+        % What should happen
+        {The client shall use protocol keepalives to detect dead connections without polling for state.}
+
+        \item \must \req{Endpoint configuration}
+        % What should happen
+        {Serval host, port, and transport addresses shall be configurable in the UI; changes take effect on "accept" button press. Sensible defaults are pre-selected.}
+
+        \item \wont \req{Equalization in client}
+        % What should happen
+        {The client shall not perform detector equalization; that function remains in Accos.}
+
+        \item \wont \req{Detector orientation in client}
+        % What should happen
+        {The client shall not manage detector orientation. It is complicated to implement and users can rotate images after the fact in any basic image processing tool.}
 
     \end{requirements}
 
@@ -421,11 +392,6 @@
     \subsubsection{Output and Raw Data Collection}
     \begin{requirements}{OUT}
 
-        \item \could \req{Acquire preview policy}
-        % what will be done
-        {If necessary, and depending on the performance characteristics of the system (yet to be determined), the final acquisitions shall run with preview disabled by default. If explicitly enabled, the user shall be warned before they acquire that preview + acquisition on the same computer can lead to data loss.}
-        % acceptance criteria
-
         \item \must \req{Raw data immutability}
         % what will be done
         {Raw event data shall be written to disk exactly as received from Serval (ordering and content preserved), with no corrections applied in-line by the client or Serval.}
@@ -433,23 +399,27 @@
 
         \item \must \req{Corrections policy}
         % what will be done
-        {Corrections required for scientific correctness (e.g., tram-lane and PLL corrections) shall be applied only in reconstructions (online/offline), never to raw. Correction parameters are retrieved from Serval (or calibration files) and recorded in provenance.}
+        {Corrections required for scientific correctness (e.g., tram-lane and PLL corrections) shall be applied in reconstructions (online/offline), but not to raw data.}
 
-        \item \wont \req{Timewalk correction in raw}
+        \item \wont \req{Timewalk correction}
         % what will be done
-        {Timewalk correction shall not be applied to raw event data. The time resolution is usually not small enough to have a huge impact.}
+        {Timewalk correction shall not be applied. The time resolution required in 4D-stem is usually not small enough to be impacted by Timewalk effects.}
 
-        \item \must \req{Sparse event export (LiberTEM)}
+        \item \must \req{Offline sparse data construction}
         % what will be done
-        {Provide a sparse event export compatible with LiberTEM (indices/values plus shape/coords).}
+        {Offline conversion of raw tpx3 binary format to LiberTEMs sparse array format.}
+
+        \item \should \req{Online sparse data construction}
+        % what will be done
+        {If performance allows, online processing to sparse arrays would be nice.}
 
         \item \should \req{Zarr export}
         % what will be done
-        {Provide a Zarr export for 4D data (e.g., \([H,W,Q_x,Q_y]\)) with chunking and compression per DATA-FMT; write online if feasible, else offline converter.}
+        {Offline conversion of raw binary tpx3 data to Zarr format}
 
         \item \should \req{HyperSpy HDF5 export}
         % what will be done
-        {Provide HyperSpy-compatible HDF5 export for reconstructed data; write online if feasible, else via offline converter.}
+        {Offline conversion of raw binary tpx3 data to HyperSpy HDF5 format}
 
         \item \must \req{Image export (2D)}
         % what will be done
@@ -458,10 +428,6 @@
         \item \could \req{ROI-based export}
         % what will be done
         {For data reduction, users may export subsets (ROIs in real space or diffraction space) to supported formats without duplicating full datasets.}
-
-        \item \could \req{Offline format converters}
-        % what will be done
-        {Provide CLI/GUI converters among supported formats}
 
         \item \must \req{Directory layout and naming}
         % what will be done
@@ -505,9 +471,12 @@
         % what will be done
         {Search mode shall render real-time preview (vADF) and, by default, shall not persist raw events or reconstructions.}
 
-        \item \must \req{Acquire mode}
+        \item \must \req{Acquire mode (Raw)}
         % what will be done
-        {Acquire mode shall persist raw data data to disk in Sparse matrix format. Preview is disabled by default; if enabled, it must not interfere with data acquisition.}
+        {Acquire mode shall persist raw data data to disk in tpx3 binary data}
+
+        \item \could \req{Acquire mode (Sparse)}
+        {If performance allows, data should be stored to disk in directly in sparse format.}
 
         \item \must \req{Mode transitions}
         % what will be done
@@ -522,75 +491,56 @@
     \subsubsection{Scan Generator}
     \begin{requirements}{SCN}
 
+        \item \must \req{Point electronic first}
+        % what will be done
+        {The principle scan generator supported shall be the one from Point Electronic that we have already been working with. }
+
+        \item \should \req{Other scan generators}
+        % what will be done
+        {Other scan generators shall be supported as needed}
+
         \item \must \req{Backend selection}
         % what will be done
         {The system shall support selecting a scan-generator backend from a configured list; unavailable backends appear disabled.}
-%  % acceptance criteria
-%  {All backends work with their respective scan generators when connected}
-%  % test criteria
-%  [Test: scan integration test suite should pass with any backend. ]
 
         \item \must \req{Start-time synchronization}
         % what will be done
-        {Detector acquisition start and scan start shall be synchronized at the start-of-scan boundary. How do we measure this?}
-%  % acceptance criteria
-%  {On qualified hardware, measured start skew \(|\Delta t|\le 1\,\mu s\) over 100 trials; failures surface as warnings and block Acquire if policy requires.}
-%  % test criteria
-%  [Test: instrument start-of-scan and detector-gate signals; compute skew distribution; assert bound.]
+        {Detector acquisition start and scan start shall be synchronized at the start and end of scan boundary.}
 
-        \item \req{ROI/geometry translation}
+        \item \could \req{ROI/geometry translation}
         % what will be done
-        {Scan generator shall accept ROI-derived geometries and produce matching probe grids for raster scan.}
-%  % acceptance criteria
-%  {Generated grids match requested \(H\times W\) (per rounding rules).}
-%  % test criteria
-%  [Test: send multiple ROIs; verify grid coverage.]
+        {As "sugar" on the top, the scan generator shall accept ROI-derived geometries and produce matching scan grids.}
 
         \item \must \req{Graceful stop}
         % what will be done
         {On \emph{Stop}, the scan generator shall honor the `stop now' and `stop at frame boundary' semantics from Z-stacking.}
-%  % acceptance criteria
-%  {Observed behavior matches selected stop mode.}
-%  % test criteria
-%  [Test: stop mid-frame with both options; verify manifests.]
     \end{requirements}
+
     \subsubsection{Observability and Pipeline Health}
     \begin{requirements}{OBS}
 
         \item \must \req{Metric definitions}
         % what will be done
-        {Performance metrics (hit-rate, throughput in bits/s, ingest→present latency) shall be computed per Appendix }
+        {Performance metrics (hit-rate, throughput in bits/s,latency) shall be computed and prefented to the user, updated at regular intevals.}
 
-        \item \must \req{Aggregation levels}
+        \item \must \req{Statistic granularity}
         % what will be done
         {Statistics shall be computed for the whole detector and per-chip.}
 
-        \item \must \req{Hit-rate UI cadence}
-        % what will be done
-        {While Running or Previewing, the UI shall update hit-rate at least once per second.}
-
-        \item \should \req{Per-stage throughput (opt-in)}
-        % what will be done
-        {When observability is enabled, each pipeline stage shall report throughput in bytes/s and queue depths; this view is off by default.}
-
-        \item \must \req{Latency reporting}
-        % what will be done
-        {The system shall compute ingest→present latency (and ingest→disk latency for Acquire) and update a 1-s rolling mean every 0.5 s.}
-
         \item \must \req{Observability overhead bound}
         % what will be done
-        {With observability enabled, median ingest->present latency shall not degrade by more than \(+10\,\mathrm{ms}\) vs. baseline.}
+        {Observability should not interfere with processing by introducing significant overhead}
 
-        \item \could \req{Scan–detector sync metric}
+        \item \could \req{Scan detector sync metric}
         % what will be done
-        {Provide a sync metric estimating jitter between scan-box timing and detector hit timestamps, e.g., \(J=\mathrm{abs}(t_{\text{hit@40MHz}}-t_{\text{scan}})\), with histogram and summary stats.}
+        {Provide a sync metric estimating jitter between scan-box timing and detector hit timestamps}
 
         \item \must \req{Dropped-data visibility}
         % what will be done
-        {Dropped/lost/mis-mapped event counters shall be tracked per second and surfaced in UI and logs, with clear warnings when non-zero.}
+        {Dropped/lost/mis-mapped events shall be tracked and displayed to the user in UI.}
     \end{requirements}
 
-    \subsubsection{UI Shell}
+    \subsubsection{User Interface GUI}
 
     This section describes the UI counterpart of the feature only. Every UI component is backed by a non-UI component and its business logic is tested away from the UI in the form of unit/integration/end-to-end testing.
 
@@ -602,9 +552,7 @@
 
         \item \must \req{Restricted detector controls}
         % what will be done
-        {The UI shall display only the detector controls listed in whitelist (still need to write the whitelist).}
-        % acceptance criteria
-        {Across all screens and states, only whitelisted controls appear; no navigation path exposes non-whitelisted controls.}
+        {The UI shall display only the detector controls listed that they need for 4D-STEM acquisition. It may be that we can abstract \textit{all} detector controls away from the user.}
 
         \item \must \req{Derived detector settings}
         % what will be done
@@ -672,7 +620,7 @@
 
         \item \could \req{ROI expanded view}
         % what will be done
-        {A ROI shall be expandable via invoking the 'right click > Expand ROI` function. The system produces a full size, zoomed in image from the selection and optionally enables updating the scan geometry to reflect the new sub-region}
+        {A ROI shall be expandable via invoking the 'right click > Expand ROI` function. The viewport resizes to zoom in making the boundary of the ROI the new edges of the imae.}
 
         \item \could \req{Dockable controls}
         % what will be done
@@ -688,8 +636,7 @@
 
         \item \must \req{Startup without connectivity}
         % what will be done
-        {If no connectivity is available at startup, the UI shall present a non-blocking status and allow offline configuration. Any setting or control relating to the unconnected device or server shall be blocked when not connected.}
-
+        {If no connectivity is available at startup, the UI shall present a non-blocking status and allow offline configuration and analysis tools. Any setting or control relating to the unconnected device or server shall be blocked when not connected.}
 
         \item \must \req{Logging}
         % what will be done
@@ -708,7 +655,7 @@
 
     \subsection{Capabilities (Non-Functional Requirements)}
 
-    \textbf{Data Integrity}: Data measured using our device is sacred. We should do our utmost to ensure we collect all data requested by the user as accurately as possible. By default, the data shall not be modified in any way storage. This philosophy is shared with serval; output should be exactly as recorded, regardless of known problems in the hardware that need correction, including the tramlane effect and the VCC correction. Nevertheless, it is convenient for users to have these things automatically corrected so that they do not need to do it themselves. We can support an opt-in switch that toggles corrections in the raw data.
+    \textbf{Data Integrity}: Raw data measured using our device is sacred. We should do our utmost to ensure we collect all data requested by the user as accurately as possible. By default, the data shall not be modified in any way storage. This philosophy is shared with serval; output should be exactly as recorded, regardless of known problems in the hardware that need correction, including the tramlane effect and the VCO correction.
 
     \textbf{Performance}: There are some performance-critical operations proposed in this software. Namely, the live processing needs to be able to keep up with the data acquisition and for adequate user feedback for the microscopist we need to minimize latency. Offline processing does not need the same performance requirement
     and just needs to run `as fast as reasonable'.
@@ -721,7 +668,6 @@
 
     \subsection{Legal and Regulatory Requirements}
     Licenses. What can we do? What can't we do?
-
 
 
 \end{document}
